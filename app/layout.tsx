@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
-import { Noto_Sans_KR, Gowun_Batang } from "next/font/google";
 import { WorldProvider } from "@/lib/world/WorldContext";
 import { LazyWorldBackground } from "@/components/world/LazyWorldBackground";
+// next/font/google는 빌드 중 Google Fonts를 직접 fetch하는데, Turbopack의
+// 폰트 리졸버가 이 과정에서 가끔 "Can't resolve
+// '@vercel/turbopack-next/internal/font/google/font'" 에러를 내며 Vercel
+// 빌드를 깨뜨린다(알려진 Turbopack 이슈). 빌드 타임 네트워크 의존을 아예
+// 없애기 위해 폰트를 npm 패키지(@fontsource)로 직접 번들한다.
+import "@fontsource/noto-sans-kr/400.css";
+import "@fontsource/noto-sans-kr/500.css";
+import "@fontsource/noto-sans-kr/700.css";
+import "@fontsource/gowun-batang/400.css";
+import "@fontsource/gowun-batang/700.css";
 import "./globals.css";
-
-const notoSansKr = Noto_Sans_KR({
-  variable: "--font-sans-kr",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
-
-const gowunBatang = Gowun_Batang({
-  variable: "--font-serif-kr",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
 
 export const metadata: Metadata = {
   title: "곁에 · gyeote",
@@ -24,10 +21,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="ko"
-      className={`${notoSansKr.variable} ${gowunBatang.variable} h-full antialiased`}
-    >
+    <html lang="ko" className="h-full antialiased">
       <body className="min-h-full flex flex-col font-sans">
         <WorldProvider>
           <LazyWorldBackground />

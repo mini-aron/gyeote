@@ -3,6 +3,8 @@
 :root {
   --background: #0d0b1a;
   --foreground: #f4f1ff;
+  --font-sans-kr: "Noto Sans KR", sans-serif;
+  --font-serif-kr: "Gowun Batang", serif;
 }
 
 @theme inline {
