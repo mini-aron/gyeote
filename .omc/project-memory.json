@@ -14,5 +14,42 @@
     }
   ],
   "userDirectives": [],
-  "hotPaths": []
+  "hotPaths": [
+    {
+      "path": "lib/church/ChurchScene.ts",
+      "accessCount": 11,
+      "lastAccessed": 1790407427664,
+      "type": "file"
+    },
+    {
+      "path": "lib/church/moods.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790406720272,
+      "type": "file"
+    },
+    {
+      "path": "lib/church/quality.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790406930445,
+      "type": "file"
+    },
+    {
+      "path": "components/church/ChurchBackground.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790407061144,
+      "type": "file"
+    },
+    {
+      "path": "components/church/MoodSwitcher.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790407067316,
+      "type": "file"
+    },
+    {
+      "path": "app/church/page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790407073456,
+      "type": "file"
+    }
+  ]
 }
