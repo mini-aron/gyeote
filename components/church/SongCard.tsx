@@ -1,0 +1,33 @@
+import type { SongResult } from "@/lib/recommend/types";
+
+export function SongCard({ song }: { song: SongResult | null }) {
+  if (!song) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-4 text-sm text-[#f4f1ff]/50">
+        지금은 어울리는 찬양을 찾지 못했어.
+      </div>
+    );
+  }
+
+  // F-09 예외처리: 듣기 링크가 없으면 곡명+아티스트 유튜브 검색 링크로 대체.
+  const listenHref =
+    song.listenUrl ??
+    `https://www.youtube.com/results?search_query=${encodeURIComponent(`${song.title} ${song.artist}`)}`;
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-4">
+      <div>
+        <p className="text-sm font-medium text-[#f4f1ff]">{song.title}</p>
+        <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
+      </div>
+      <a
+        href={listenHref}
+        target="_blank"
+        rel="noreferrer"
+        className="shrink-0 rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-xs text-[#f4f1ff]/80"
+      >
+        들으러 가기
+      </a>
+    </div>
+  );
+}
