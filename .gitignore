@@ -40,5 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# oh-my-claudecode local session state
-/.omc
+# oh-my-claudecode: keep project-memory.json (shared project context),
+# ignore per-session/machine runtime state
+/.omc/state
