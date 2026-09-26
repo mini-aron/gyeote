@@ -43,3 +43,6 @@ next-env.d.ts
 # oh-my-claudecode: keep project-memory.json (shared project context),
 # ignore per-session/machine runtime state
 /.omc/state
+
+# local Claude Code project harness — not shared via the repo
+/CLAUDE.md
