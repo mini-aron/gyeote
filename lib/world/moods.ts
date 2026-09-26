@@ -1,4 +1,18 @@
+import type { TimeBand } from "@/lib/greeting";
+
 export type MoodKey = "dawn" | "day" | "dusk" | "night";
+
+const MOOD_BY_TIME_BAND: Record<TimeBand, MoodKey> = {
+  dawn: "dawn",
+  morning: "day",
+  afternoon: "day",
+  evening: "dusk",
+  night: "night",
+};
+
+export function getMoodForTimeBand(band: TimeBand): MoodKey {
+  return MOOD_BY_TIME_BAND[band];
+}
 
 export interface MoodPreset {
   skyTop: number;

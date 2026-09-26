@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { MoodSwitcher } from "@/components/world/MoodSwitcher";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { MoodBadge } from "@/components/world/MoodBadge";
 import { ChurchChat } from "@/components/church/ChurchChat";
 import { ChurchResult } from "@/components/church/ChurchResult";
 import { useWorld } from "@/lib/world/WorldContext";
-import type { MoodKey } from "@/lib/world/moods";
+import { getMoodForTimeBand, type MoodKey } from "@/lib/world/moods";
+import { getTimeBand } from "@/lib/greeting";
 import { analyzeConversation } from "@/lib/church/analyze";
 import { pickResultLine } from "@/lib/church/resultLines";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
@@ -16,7 +17,8 @@ type Phase = "chat" | "loading" | "result" | "error";
 const MAX_SONG_RETRIES = 3;
 
 export default function ChurchPage() {
-  const [mood, setMoodState] = useState<MoodKey>("night");
+  const [mood, setMoodDisplay] = useState<MoodKey | null>(null);
+  const hasSetMood = useRef(false);
   const { flyTo, setMood } = useWorld();
   const [phase, setPhase] = useState<Phase>("chat");
   const [result, setResult] = useState<RecommendResult | null>(null);
@@ -28,8 +30,15 @@ export default function ChurchPage() {
   }, [flyTo]);
 
   useEffect(() => {
-    setMood(mood);
-  }, [mood, setMood]);
+    // 현재 시각으로 무드를 한 번만 정한다 — 선택은 못 하고 표시만 한다.
+    // Date 기반 클라이언트 전용 계산이라 렌더 중이 아니라 effect에서 읽는다
+    // (하이드레이션 불일치 방지, components/StartScreen.tsx와 동일한 패턴).
+    if (hasSetMood.current) return;
+    hasSetMood.current = true;
+    const currentMood = getMoodForTimeBand(getTimeBand(new Date()));
+    setMoodDisplay(currentMood);
+    setMood(currentMood);
+  }, [setMood]);
 
   const fetchRecommendation = useCallback(
     async (include?: { verse?: boolean; song?: boolean }) => {
@@ -118,11 +127,11 @@ export default function ChurchPage() {
         </div>
       )}
 
-      <div className="pointer-events-none absolute right-4 top-[calc(16px+env(safe-area-inset-top,0px))]">
-        <div className="pointer-events-auto">
-          <MoodSwitcher mood={mood} onChange={setMoodState} />
+      {mood && (
+        <div className="pointer-events-none absolute right-4 top-[calc(16px+env(safe-area-inset-top,0px))]">
+          <MoodBadge mood={mood} />
         </div>
-      </div>
+      )}
     </main>
   );
 }
