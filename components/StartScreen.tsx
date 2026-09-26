@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { StarField } from "@/components/StarField";
+import { useWorld } from "@/lib/world/WorldContext";
 import { getGreeting } from "@/lib/greeting";
 import { checkAndRecordVisit, recordEntry, type EntryChoice } from "@/lib/visit";
 
 export function StartScreen() {
   const [greeting, setGreeting] = useState<string | null>(null);
   const hasRecordedVisit = useRef(false);
+  const { flyTo } = useWorld();
+
+  useEffect(() => {
+    flyTo("sky");
+  }, [flyTo]);
 
   useEffect(() => {
     // Guard against React Strict Mode's double effect invocation in dev:
@@ -24,10 +29,8 @@ export function StartScreen() {
   }, []);
 
   return (
-    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#0d0b1a] px-6 py-12 text-[#f4f1ff]">
-      <StarField />
-
-      <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-10 text-center">
+    <div className="pointer-events-none flex min-h-dvh flex-col items-center justify-center px-6 py-12 text-[#f4f1ff]">
+      <div className="pointer-events-auto flex w-full max-w-sm flex-col items-center gap-10 text-center">
         <div className="flex flex-col items-center gap-3">
           <p className="text-xs tracking-[0.3em] text-[#f4f1ff]/50">GYEOTE</p>
           <h1 className="font-serif-kr text-3xl font-semibold">곁에</h1>

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Gowun_Batang } from "next/font/google";
+import { WorldProvider } from "@/lib/world/WorldContext";
+import { LazyWorldBackground } from "@/components/world/LazyWorldBackground";
 import "./globals.css";
 
 const notoSansKr = Noto_Sans_KR({
@@ -26,7 +28,19 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ko"
       className={`${notoSansKr.variable} ${gowunBatang.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <WorldProvider>
+          <LazyWorldBackground />
+          {/* Keeps overlay text legible regardless of how bright the 3D scene is behind it. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-[5] h-[62%] bg-gradient-to-t from-[#0a0816]/90 via-[#0a0816]/50 to-transparent"
+          />
+          <div className="pointer-events-none relative z-10 flex min-h-dvh flex-1 flex-col">
+            {children}
+          </div>
+        </WorldProvider>
+      </body>
     </html>
   );
 }

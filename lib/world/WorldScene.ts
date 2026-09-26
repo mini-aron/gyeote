@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { COLOR_KEYS, MOODS, NUM_KEYS, type MoodKey } from "./moods";
+import { STATIONS, type StationKey } from "./stations";
 
 // Fixed at desktop-grade fidelity for now — no low-power branch yet.
 const BLADE_COUNT = 34000;
@@ -7,6 +8,11 @@ const DUST_COUNT = 700;
 const STAR_COUNT = 900;
 const MAX_PIXEL_RATIO = 2;
 const CHURCH_Z = -17;
+const BACKYARD_Z = -29;
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
 
 type ColorKey = (typeof COLOR_KEYS)[number];
 type NumKey = (typeof NUM_KEYS)[number];
@@ -15,13 +21,23 @@ interface MoodState extends Record<ColorKey, THREE.Color>, Record<NumKey, number
   sunDir: THREE.Vector3;
 }
 
-export class ChurchScene {
+export class WorldScene {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene: THREE.Scene;
   private readonly camera: THREE.PerspectiveCamera;
-  private readonly lookTarget = new THREE.Vector3(0, 3.6, -14);
   private readonly timer = new THREE.Timer();
+
+  // Camera "flight" between named stations — see ./stations.ts. basePos/baseLook
+  // are the current (possibly mid-flight) station values; the idle drift/drag
+  // look offsets in step() are applied on top of these, not instead of them.
+  private station: StationKey = "church";
+  private readonly basePos = new THREE.Vector3(...STATIONS.church.position);
+  private readonly baseLook = new THREE.Vector3(...STATIONS.church.lookAt);
+  private readonly flightFrom = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
+  private readonly flightTo = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
+  private flightT = 1;
+  private flightDuration = 2200;
 
   private readonly hemi: THREE.HemisphereLight;
   private readonly sunLight: THREE.DirectionalLight;
@@ -133,7 +149,7 @@ export class ChurchScene {
       0.1,
       900,
     );
-    this.camera.position.set(0, 1.75, 7);
+    this.camera.position.set(...STATIONS.church.position);
 
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x404020, 0.6);
     this.scene.add(this.hemi);
@@ -217,6 +233,8 @@ export class ChurchScene {
     this.buildChurch(church, dotTex);
 
     this.buildDistantTrees();
+    this.buildWell();
+    this.buildBackyardTrees();
 
     // ---------- Light shafts / mist / dust ----------
     this.shafts = new THREE.Group();
@@ -244,6 +262,26 @@ export class ChurchScene {
     for (const k of COLOR_KEYS) this.tgt[k].set(preset[k]);
     for (const k of NUM_KEYS) this.tgt[k] = preset[k];
     this.tgt.sunDir.fromArray(preset.sunDir).normalize();
+  }
+
+  /** Smoothly moves the camera to a named station. durationMs=0 snaps instantly. */
+  flyTo(station: StationKey, durationMs = 2200): void {
+    if (station === this.station && this.flightT >= 1) return;
+    const target = STATIONS[station];
+    this.flightFrom.pos.copy(this.basePos);
+    this.flightFrom.look.copy(this.baseLook);
+    this.flightTo.pos.set(...target.position);
+    this.flightTo.look.set(...target.lookAt);
+    this.station = station;
+
+    if (durationMs <= 0) {
+      this.basePos.copy(this.flightTo.pos);
+      this.baseLook.copy(this.flightTo.look);
+      this.flightT = 1;
+    } else {
+      this.flightDuration = durationMs;
+      this.flightT = 0;
+    }
   }
 
   dispose(): void {
@@ -524,6 +562,80 @@ export class ChurchScene {
     }
   }
 
+  private buildWell(): void {
+    const well = new THREE.Group();
+    well.position.set(0, 0, BACKYARD_Z);
+    this.scene.add(well);
+
+    // Stone parts reuse the church's own materials so they track mood too.
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.15, 0.85, 16), this.stoneMat);
+    base.position.y = 0.425;
+    well.add(base);
+
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.12, 8, 20), this.trimMat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = 0.85;
+    well.add(rim);
+
+    // Wood parts are a fixed color — not worth mood-tracking for one small prop.
+    const woodMat = new THREE.MeshLambertMaterial({ color: 0x5b4636 });
+    for (const side of [-1, 1]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.5, 6), woodMat);
+      post.position.set(side * 0.95, 0.85 + 0.75, 0);
+      well.add(post);
+    }
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.12, 0.12), woodMat);
+    beam.position.set(0, 0.85 + 1.5, 0);
+    well.add(beam);
+
+    const roofPitch = 0.5;
+    const roofHalf = 1.3;
+    const roofSlope = roofHalf / Math.cos(roofPitch);
+    for (const sgn of [-1, 1]) {
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(roofSlope, 0.08, 1.6), this.roofMat);
+      panel.position.set(
+        (sgn * roofHalf) / 2,
+        0.85 + 1.5 + (roofHalf * Math.tan(roofPitch)) / 2 + 0.1,
+        0,
+      );
+      panel.rotation.z = -sgn * roofPitch;
+      well.add(panel);
+    }
+
+    const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.9, 4), this.trimMat);
+    rope.position.set(0, 0.85 + 1.0, 0);
+    well.add(rope);
+
+    const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.22, 8), woodMat);
+    bucket.position.set(0, 0.85 + 0.5, 0);
+    well.add(bucket);
+  }
+
+  private buildBackyardTrees(): void {
+    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x2f2a33 });
+    const leafMat = new THREE.MeshLambertMaterial({ color: 0x24402f });
+    const positions: Array<[number, number]> = [
+      [-4.5, BACKYARD_Z + 2.5],
+      [4.5, BACKYARD_Z + 2.5],
+      [-3, BACKYARD_Z - 3.5],
+      [3.2, BACKYARD_Z - 3.5],
+      [-6.2, BACKYARD_Z - 0.5],
+      [6, BACKYARD_Z - 1.2],
+    ];
+    for (const [tx, tz] of positions) {
+      const th = 6 + Math.random() * 2.5;
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.38, th * 0.42, 6), trunkMat);
+      trunk.position.set(tx, th * 0.21, tz);
+      this.scene.add(trunk);
+      const crown = new THREE.Mesh(
+        new THREE.CylinderGeometry(0, 1.8 + Math.random() * 0.6, th, 7),
+        leafMat,
+      );
+      crown.position.set(tx, th * 0.42 + th * 0.42, tz);
+      this.scene.add(crown);
+    }
+  }
+
   private buildShafts(): void {
     const shaftTex = this.createShaftTexture();
     for (let sh = 0; sh < 6; sh++) {
@@ -705,15 +817,26 @@ export class ChurchScene {
     this.grassUniforms.uTime.value = this.time;
     this.grassUniforms.uWind.value = 0.42 + Math.sin(this.time * 0.17) * 0.16;
 
+    if (this.flightT < 1) {
+      this.flightT = Math.min(1, this.flightT + dt * 1000 / this.flightDuration);
+      const e = easeInOutCubic(this.flightT);
+      this.basePos.lerpVectors(this.flightFrom.pos, this.flightTo.pos, e);
+      this.baseLook.lerpVectors(this.flightFrom.look, this.flightTo.look, e);
+    }
+
     this.look.x += (this.pointer.x - this.look.x) * Math.min(1, dt * 3.2);
     this.look.y += (this.pointer.y - this.look.y) * Math.min(1, dt * 3.2);
-    const drift = Math.sin(this.time * 0.08) * 0.35;
-    this.camera.position.x = drift + this.look.x * 5.5;
-    this.camera.position.y = 1.75 + Math.sin(this.time * 0.12) * 0.12 - this.look.y * 1.6;
+    const driftX = Math.sin(this.time * 0.08) * 0.35;
+    const driftY = Math.sin(this.time * 0.12) * 0.12;
+    this.camera.position.set(
+      this.basePos.x + driftX + this.look.x * 5.5,
+      this.basePos.y + driftY - this.look.y * 1.6,
+      this.basePos.z,
+    );
     this.camera.lookAt(
-      this.lookTarget.x + this.look.x * 2.2,
-      this.lookTarget.y - this.look.y * 3.4,
-      this.lookTarget.z,
+      this.baseLook.x + this.look.x * 2.2,
+      this.baseLook.y - this.look.y * 3.4,
+      this.baseLook.z,
     );
     this.sky.position.copy(this.camera.position);
     this.stars.position.copy(this.camera.position);

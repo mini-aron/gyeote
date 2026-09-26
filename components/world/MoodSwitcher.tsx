@@ -1,6 +1,6 @@
 "use client";
 
-import { MOODS, type MoodKey } from "@/lib/church/moods";
+import { MOODS, type MoodKey } from "@/lib/world/moods";
 
 const MOOD_ORDER: MoodKey[] = ["dawn", "day", "dusk", "night"];
 

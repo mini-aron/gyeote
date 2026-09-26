@@ -22,9 +22,51 @@
       "type": "file"
     },
     {
+      "path": "lib/world/WorldScene.ts",
+      "accessCount": 8,
+      "lastAccessed": 1790408683972,
+      "type": "file"
+    },
+    {
+      "path": "app/layout.tsx",
+      "accessCount": 8,
+      "lastAccessed": 1790409021049,
+      "type": "file"
+    },
+    {
       "path": "CLAUDE.md",
+      "accessCount": 4,
+      "lastAccessed": 1790409283257,
+      "type": "file"
+    },
+    {
+      "path": "components/StartScreen.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1790408787855,
+      "type": "file"
+    },
+    {
+      "path": "lib/world/WorldContext.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1790409000641,
+      "type": "file"
+    },
+    {
+      "path": "lib/world/stations.ts",
+      "accessCount": 3,
+      "lastAccessed": 1790409183152,
+      "type": "file"
+    },
+    {
+      "path": "components/world/MoodSwitcher.tsx",
       "accessCount": 2,
-      "lastAccessed": 1790407883472,
+      "lastAccessed": 1790408744649,
+      "type": "file"
+    },
+    {
+      "path": "app/church/page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1790408798412,
       "type": "file"
     },
     {
@@ -52,9 +94,21 @@
       "type": "file"
     },
     {
-      "path": "app/church/page.tsx",
+      "path": "components/world/WorldBackground.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790407073456,
+      "lastAccessed": 1790408761955,
+      "type": "file"
+    },
+    {
+      "path": "app/backyard/page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790408803419,
+      "type": "file"
+    },
+    {
+      "path": "components/world/LazyWorldBackground.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790408831280,
       "type": "file"
     }
   ]
