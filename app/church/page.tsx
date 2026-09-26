@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BackToStartLink } from "@/components/BackToStartLink";
 import { MoodBadge } from "@/components/world/MoodBadge";
 import { ChurchChat } from "@/components/church/ChurchChat";
 import { ChurchResult } from "@/components/church/ChurchResult";
@@ -126,6 +127,12 @@ export default function ChurchPage() {
           </button>
         </div>
       )}
+
+      <div className="pointer-events-none absolute left-4 top-[calc(16px+env(safe-area-inset-top,0px))]">
+        <div className="pointer-events-auto">
+          <BackToStartLink />
+        </div>
+      </div>
 
       {mood && (
         <div className="pointer-events-none absolute right-4 top-[calc(16px+env(safe-area-inset-top,0px))]">
