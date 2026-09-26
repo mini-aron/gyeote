@@ -48,3 +48,5 @@ next-env.d.ts
 # local Claude Code project harness — not shared via the repo
 /CLAUDE.md
 /.claude/rules
+/.claude/hooks
+/.claude/settings.local.json
