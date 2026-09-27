@@ -5,6 +5,8 @@ import Link from "next/link";
 import { VerseCard } from "./VerseCard";
 import { SongCard } from "./SongCard";
 import type { RecommendResult } from "@/lib/recommend/types";
+import { buildShareText } from "@/lib/share/buildShareText";
+import { isKakaoConfigured, shareToKakao } from "@/lib/share/kakaoShare";
 
 interface ChurchResultProps {
   resultLine: string;
@@ -24,17 +26,30 @@ export function ChurchResult({
   onRestart,
 }: ChurchResultProps) {
   async function handleShare() {
-    // F-09: 뒤뜰 글/예수님의 글은 공유에 포함하지 않는다 — 말씀 + 찬양만.
-    const lines = [
-      verse ? `${verse.reference} — ${verse.body}` : null,
-      song ? `${song.title} · ${song.artist}` : null,
-    ].filter((line): line is string => Boolean(line));
-    if (lines.length === 0) return;
+    const shareText = buildShareText(verse, song);
+    if (!shareText) return;
+    const url = window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: shareText, url });
+        return;
+      } catch {
+        // 사용자가 공유 시트를 취소했거나 지원 안 하는 대상 — 클립보드 복사로 이어감
+      }
+    }
+
     try {
-      await navigator.clipboard.writeText(lines.join("\n"));
+      await navigator.clipboard.writeText(`${shareText}\n${url}`);
     } catch {
       // 클립보드 접근 실패 — 공유는 부가 기능이라 조용히 무시
     }
+  }
+
+  async function handleKakaoShare() {
+    const shareText = buildShareText(verse, song);
+    if (!shareText) return;
+    await shareToKakao(shareText, window.location.href);
   }
 
   return (
@@ -48,6 +63,9 @@ export function ChurchResult({
             다른 곡 추천받기{retriesLeft > 0 ? ` (${retriesLeft}회 남음)` : ""}
           </ActionButton>
           <ActionLink href="/backyard">뒤뜰에서 더 얘기하기</ActionLink>
+          {isKakaoConfigured && (
+            <ActionButton onClick={handleKakaoShare}>카카오톡 공유</ActionButton>
+          )}
           <ActionButton onClick={handleShare}>공유하기</ActionButton>
           <ActionButton onClick={onRestart}>처음부터</ActionButton>
         </div>
