@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { pickOpeningLine } from "@/lib/backyard/openingLines";
 import { getDraft, saveDraft, clearDraft } from "@/lib/backyard/draft";
 import { useSpeechRecognition } from "@/lib/backyard/useSpeechRecognition";
+import { useTypewriterAppend } from "@/lib/backyard/useTypewriterAppend";
 import { VoiceButton } from "./VoiceButton";
 
 const MAX_LENGTH = 1000;
@@ -16,6 +17,7 @@ export function BackyardInput({ onFinish }: { onFinish: (text: string) => void }
   const [nudge, setNudge] = useState<string | null>(null);
   const hasNudged = useRef(false);
   const hasInitialized = useRef(false);
+  const hasQueuedVoiceText = useRef(false);
 
   useEffect(() => {
     // 여는 문구는 Math.random()으로 고르고 임시 저장 글은 localStorage를 읽는데,
@@ -27,14 +29,21 @@ export function BackyardInput({ onFinish }: { onFinish: (text: string) => void }
     setText(getDraft());
   }, []);
 
+  const enqueueTypedText = useTypewriterAppend((char) => {
+    setText((prev) => {
+      const next = `${prev}${char}`.slice(0, MAX_LENGTH);
+      saveDraft(next);
+      return next;
+    });
+  });
+
   const { status: voiceStatus, start: startVoice, stop: stopVoice } = useSpeechRecognition(
     (finalText) => {
-      setText((prev) => {
-        const separator = prev && !prev.endsWith(" ") ? " " : "";
-        const next = `${prev}${separator}${finalText}`.slice(0, MAX_LENGTH);
-        saveDraft(next);
-        return next;
-      });
+      // 음성으로 들어온 문장은 즉시 붙이지 않고 한 글자씩 흘려 넣어
+      // 실시간으로 타이핑되는 느낌을 준다.
+      const needsSeparator = text.length > 0 || hasQueuedVoiceText.current;
+      hasQueuedVoiceText.current = true;
+      enqueueTypedText(needsSeparator ? ` ${finalText}` : finalText);
     },
   );
 
