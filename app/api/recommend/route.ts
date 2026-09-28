@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { recommend } from "@/lib/recommend/recommend";
-import type { ConversationTags } from "@/lib/church/types";
+import type { ConversationTags } from "@/lib/analysis/types";
 import type { RecommendationRecord } from "@/lib/recommend/types";
 
 interface RecommendRequestBody {
