@@ -9,10 +9,9 @@ import { ChurchResult } from "@/components/church/ChurchResult";
 import { useWorld } from "@/lib/world/WorldContext";
 import { getMoodForTimeBand, type MoodKey } from "@/lib/world/moods";
 import { getTimeBand } from "@/lib/greeting";
-import { pickResultLine } from "@/lib/church/resultLines";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
-import type { AnalysisResult, ConversationTags } from "@/lib/analysis/types";
+import type { AnalysisResult } from "@/lib/analysis/types";
 
 type Phase = "chat" | "loading" | "result" | "error";
 
@@ -44,7 +43,7 @@ export default function ChurchPage() {
   }, [setMood]);
 
   const fetchRecommendation = useCallback(
-    async (tagsToUse: ConversationTags, include?: { verse?: boolean; song?: boolean }) => {
+    async (tagsToUse: AnalysisResult, include?: { verse?: boolean; song?: boolean }) => {
       setPhase("loading");
       try {
         const history = getRecommendationHistory();
@@ -65,7 +64,9 @@ export default function ChurchPage() {
           verseId: include?.verse === false ? null : (data.verse?.id ?? null),
           date: new Date().toISOString(),
         });
-        setResultLine((prev) => prev || pickResultLine());
+        // 곡만 다시 뽑는 재시도에서는 서버가 resultLine을 아예 안 보낸다 —
+        // 기존 글을 그대로 둔다.
+        setResultLine((prev) => data.resultLine ?? prev);
         setPhase("result");
       } catch {
         setPhase("error");
