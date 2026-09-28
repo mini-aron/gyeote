@@ -2,16 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackToStartLink } from "@/components/BackToStartLink";
+import { LoadingDots } from "@/components/LoadingDots";
 import { MoodBadge } from "@/components/world/MoodBadge";
 import { ChurchChat } from "@/components/church/ChurchChat";
 import { ChurchResult } from "@/components/church/ChurchResult";
 import { useWorld } from "@/lib/world/WorldContext";
 import { getMoodForTimeBand, type MoodKey } from "@/lib/world/moods";
 import { getTimeBand } from "@/lib/greeting";
-import { pickResultLine } from "@/lib/church/resultLines";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
-import type { AnalysisResult, ConversationTags } from "@/lib/analysis/types";
+import type { AnalysisResult } from "@/lib/analysis/types";
 
 type Phase = "chat" | "loading" | "result" | "error";
 
@@ -43,7 +43,7 @@ export default function ChurchPage() {
   }, [setMood]);
 
   const fetchRecommendation = useCallback(
-    async (tagsToUse: ConversationTags, include?: { verse?: boolean; song?: boolean }) => {
+    async (tagsToUse: AnalysisResult, include?: { verse?: boolean; song?: boolean }) => {
       setPhase("loading");
       try {
         const history = getRecommendationHistory();
@@ -64,7 +64,9 @@ export default function ChurchPage() {
           verseId: include?.verse === false ? null : (data.verse?.id ?? null),
           date: new Date().toISOString(),
         });
-        setResultLine((prev) => prev || pickResultLine());
+        // 곡만 다시 뽑는 재시도에서는 서버가 resultLine을 아예 안 보낸다 —
+        // 기존 글을 그대로 둔다.
+        setResultLine((prev) => data.resultLine ?? prev);
         setPhase("result");
       } catch {
         setPhase("error");
@@ -113,10 +115,11 @@ export default function ChurchPage() {
       {phase === "chat" && <ChurchChat onFinish={handleChatFinish} />}
 
       {phase === "loading" && (
-        <div className="pointer-events-none flex flex-1 items-center justify-center">
+        <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-3">
           <p className="pointer-events-auto text-sm text-[#f4f1ff]/60">
-            잠깐만, 생각하고 있어…
+            잠시만요, 생각하고 있어요…
           </p>
+          <LoadingDots className="text-[#f4f1ff]/60" />
         </div>
       )}
 
@@ -134,7 +137,7 @@ export default function ChurchPage() {
       {phase === "error" && (
         <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="pointer-events-auto text-sm text-[#f4f1ff]/60">
-            지금은 추천을 가져올 수 없어. 잠시 후 다시 들러줘.
+            지금은 추천을 가져올 수 없어요. 잠시 후 다시 들러주세요.
           </p>
           <button
             type="button"

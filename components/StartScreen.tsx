@@ -40,9 +40,9 @@ export function StartScreen() {
           <h1 className="font-serif-kr text-3xl font-semibold">곁에</h1>
           <p className="min-h-6 text-sm text-[#f4f1ff]/70">{greeting ?? " "}</p>
           <p className="max-w-xs text-sm leading-relaxed text-[#f4f1ff]/50">
-            짧게 대화하면, 지금 네 마음에 꼭 맞는
+            짧게 대화하면, 지금 마음에 꼭 맞는
             <br />
-            말씀 한 구절과 찬양 한 곡을 골라줄게
+            말씀 한 구절과 찬양 한 곡을 골라드려요
           </p>
         </div>
 

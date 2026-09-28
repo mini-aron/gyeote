@@ -10,14 +10,14 @@ export function getTimeBand(date: Date): TimeBand {
 }
 
 const GREETINGS: Record<TimeBand, string> = {
-  dawn: "이른 아침이네, 오늘 하루도 곁에 있을게",
-  morning: "좋은 아침이야",
-  afternoon: "오늘 하루 잘 보내고 있어?",
-  evening: "오늘 하루 어땠어?",
-  night: "오늘 하루 수고했어",
+  dawn: "이른 아침이네요, 오늘 하루도 곁에 있을게요",
+  morning: "좋은 아침이에요",
+  afternoon: "오늘 하루 잘 보내고 계세요?",
+  evening: "오늘 하루 어떠셨어요?",
+  night: "오늘 하루 수고하셨어요",
 };
 
 export function getGreeting(date: Date, isReturning: boolean): string {
   const base = GREETINGS[getTimeBand(date)];
-  return isReturning ? `또 왔구나. ${base}` : base;
+  return isReturning ? `또 오셨네요. ${base}` : base;
 }

@@ -8,7 +8,7 @@ const SITUATION_LIST: readonly string[] = SITUATION_OPTIONS;
 const THEME_LIST: readonly string[] = THEME_OPTIONS;
 const MOOD_LIST: readonly string[] = MOOD_OPTIONS;
 
-const SYSTEM_PROMPT = `너는 "곁에" 서비스의 대화 분석기다. 사용자와 예수님의 대화 기록을 읽고, 아래 JSON 형식으로만 답하라. 설명, 코드블록 표시, 인사말 등 JSON 이외의 어떤 텍스트도 붙이지 마라.
+const SYSTEM_PROMPT = `너는 "곁에" 서비스의 대화 분석기다. 사용자와 상대방의 대화 기록을 읽고, 아래 JSON 형식으로만 답하라. 설명, 코드블록 표시, 인사말 등 JSON 이외의 어떤 텍스트도 붙이지 마라.
 
 {
   "situation": "<상황 목록 중 정확히 하나>",
