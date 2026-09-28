@@ -10,8 +10,9 @@ interface QuestionRequestBody {
 }
 
 // AI 실패 시 폴백 — 1번째 턴은 시간대 고정 질문(isFinal: false), 그 이후는
-// 항상 고정 꼬리질문으로 바로 마무리한다(isFinal: true). "총 2~4턴" 범위 중
-// 최소값인 2턴으로 안전하게 수렴하는 경로다.
+// 항상 고정 꼬리질문으로 바로 마무리한다(isFinal: true). generateQuestion의
+// 최소 턴(MIN_TURNS) 강제와 무관하게, AI를 아예 못 쓰는 상황에서 대화를
+// 붙잡아두지 않고 2턴 만에 안전하게 끝내는 별도 경로다.
 function fallbackQuestion(turnNumber: number): GeneratedQuestion {
   if (turnNumber === 1) {
     return { ...FIRST_QUESTIONS[getTimeBand(new Date())], isFinal: false };
