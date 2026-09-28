@@ -1,6 +1,7 @@
 import "server-only";
-import { callNvidiaChat } from "@/shared/lib/nvidia-client";
+import { callOllamaChat } from "@/shared/lib/ollama-client";
 import { THEME_OPTIONS, SITUATION_OPTIONS, MOOD_OPTIONS } from "./tagVocabulary";
+import { situationHintFromTime } from "./situationHint";
 import type { AnalysisResult } from "./types";
 
 const SITUATION_LIST: readonly string[] = SITUATION_OPTIONS;
@@ -25,7 +26,9 @@ const SYSTEM_PROMPT = `너는 "곁에" 서비스의 대화 분석기다. 사용�
 
 규칙:
 - situation/themes/moods는 반드시 위 목록에 있는 값만 쓴다. 목록에 없는 값을 지어내지 않는다.
-- 사용자가 대화에서 직접 말하지 않은 것을 단정하지 않는다.
+- situation은 대화에 분명한 단서(예: "드라이브 중이야", "위로가 필요해")가 있으면 그것을 우선하고, 단서가 없으면 사용자 메시지와 함께 주어지는 "현재 접속 시간대"를 그대로 쓴다 — 시간 정보를 지어내지 않는다.
+- 대화에서 직접 말하지 않은 감정이나 상황(예: 죄책감, 회개)을 단정하지 않는다.
+- 조언하거나 해결책을 제시하지 않는다 — reason과 efforts는 판단·가르침 없이 대화에서 관찰한 사실만 담는다.
 - efforts는 대화가 짧아 재료가 부족하면 빈 배열로 둔다.`;
 
 function stripCodeFence(text: string): string {
@@ -75,10 +78,15 @@ function parseAnalysisResult(raw: string): AnalysisResult {
  * F-03/F-06 분석 본체. 실패(네트워크 오류·JSON 파싱 실패·스키마 불일치)하면
  * 그대로 던진다 — 폴백 처리는 호출부(app/api/analyze)의 몫이다.
  */
-export async function analyzeText(transcript: string): Promise<AnalysisResult> {
-  const raw = await callNvidiaChat([
+export async function analyzeText(transcript: string, now: Date = new Date()): Promise<AnalysisResult> {
+  const userContent = `현재 접속 시간대(참고용 — 대화에 더 분명한 단서가 있으면 그걸 우선한다): ${situationHintFromTime(now)}
+
+대화 기록:
+${transcript}`;
+
+  const raw = await callOllamaChat([
     { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: transcript },
+    { role: "user", content: userContent },
   ]);
 
   return parseAnalysisResult(raw);
