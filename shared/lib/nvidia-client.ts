@@ -1,7 +1,7 @@
 import "server-only";
+import { NVIDIA_MODEL, NVIDIA_MODEL_OPTIONS } from "./nvidia-model";
 
 const NVIDIA_API_BASE_URL = "https://integrate.api.nvidia.com/v1";
-const NVIDIA_MODEL = "meta/llama-3.3-70b-instruct";
 
 const apiKey = process.env.NVIDIA_API_KEY;
 
@@ -30,6 +30,7 @@ export async function callNvidiaChat(messages: ChatMessage[]): Promise<string> {
       messages,
       temperature: 0.4,
       max_tokens: 600,
+      ...NVIDIA_MODEL_OPTIONS,
     }),
   });
 
