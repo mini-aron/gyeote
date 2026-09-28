@@ -31,7 +31,8 @@ export const FIRST_QUESTIONS: Record<TimeBand, FallbackQuestion> = {
   },
 };
 
-// "마무리 질문 (추천 직전)" 섹션에서 가져온 고정 꼬리질문 — 2번째 턴의 폴백.
+// "마무리 질문 (추천 직전)" 섹션에서 가져온 고정 꼬리질문 — 2번째 턴 이후
+// 아무 시점에서나 AI 호출이 실패하면 이 질문으로 바로 마무리한다(isFinal: true).
 export const FOLLOW_UP_QUESTION: FallbackQuestion = {
   question: "지금 마음에 위로가 필요해, 아니면 힘이 나는 게 필요해?",
   choices: ["위로", "힘", "둘 다"],

@@ -3,11 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { LoadingDots } from "@/components/LoadingDots";
 import { getTimeBand } from "@/lib/greeting";
-import {
-  FIRST_QUESTIONS,
-  FOLLOW_UP_QUESTION,
-  type FallbackQuestion,
-} from "@/lib/church/fallbackQuestions";
+import { FIRST_QUESTIONS, FOLLOW_UP_QUESTION } from "@/lib/church/fallbackQuestions";
+import type { GeneratedQuestion } from "@/lib/church/types";
 
 const FREE_TEXT_MAX_LENGTH = 200;
 
@@ -20,20 +17,27 @@ function formatTranscript(messages: ChatMessage[]): string {
   return messages.map((m) => `${m.from === "jesus" ? "예수님" : "나"}: ${m.text}`).join("\n");
 }
 
-async function fetchQuestion(turn: 1 | 2, transcript: string): Promise<FallbackQuestion> {
+// 네트워크 자체가 실패했을 때만 쓰는 클라이언트 폴백 — 서버(app/api/church-question)가
+// 이미 자체 폴백을 갖고 있으니, 여기는 fetch()가 아예 던지는 경우의 안전망이다.
+function clientFallback(turnNumber: number): GeneratedQuestion {
+  if (turnNumber === 1) return { ...FIRST_QUESTIONS[getTimeBand(new Date())], isFinal: false };
+  return { ...FOLLOW_UP_QUESTION, isFinal: true };
+}
+
+async function fetchQuestion(turnNumber: number, transcript: string): Promise<GeneratedQuestion> {
   const response = await fetch("/api/church-question", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ turn, transcript }),
+    body: JSON.stringify({ turnNumber, transcript }),
   });
   if (!response.ok) throw new Error("question_failed");
-  return (await response.json()) as FallbackQuestion;
+  return (await response.json()) as GeneratedQuestion;
 }
 
 export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => void }) {
-  const [turn, setTurn] = useState<1 | 2>(1);
+  const [turnNumber, setTurnNumber] = useState(1);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentQuestion, setCurrentQuestion] = useState<FallbackQuestion | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<GeneratedQuestion | null>(null);
   const [isQuestionLoading, setIsQuestionLoading] = useState(true);
   const [freeText, setFreeText] = useState("");
   const hasFetchedFirstQuestion = useRef(false);
@@ -45,7 +49,7 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
     hasFetchedFirstQuestion.current = true;
 
     fetchQuestion(1, "")
-      .catch(() => FIRST_QUESTIONS[getTimeBand(new Date())])
+      .catch(() => clientFallback(1))
       .then((question) => {
         setCurrentQuestion(question);
         setMessages([{ from: "jesus", text: question.question }]);
@@ -55,7 +59,7 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
 
   async function answer(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || isQuestionLoading) return;
+    if (!trimmed || isQuestionLoading || !currentQuestion) return;
 
     setFreeText("");
     // setMessages는 비동기라 방금 추가한 답변이 messages 상태엔 아직 안
@@ -63,18 +67,20 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
     const updatedMessages = [...messages, { from: "user" as const, text: trimmed }];
     setMessages(updatedMessages);
 
-    if (turn === 1) {
-      setIsQuestionLoading(true);
-      const nextQuestion = await fetchQuestion(2, formatTranscript(updatedMessages)).catch(
-        () => FOLLOW_UP_QUESTION,
-      );
-      setTurn(2);
-      setCurrentQuestion(nextQuestion);
-      setMessages([...updatedMessages, { from: "jesus", text: nextQuestion.question }]);
-      setIsQuestionLoading(false);
-    } else {
+    if (currentQuestion.isFinal) {
       onFinish(formatTranscript(updatedMessages));
+      return;
     }
+
+    setIsQuestionLoading(true);
+    const nextTurnNumber = turnNumber + 1;
+    const nextQuestion = await fetchQuestion(nextTurnNumber, formatTranscript(updatedMessages)).catch(
+      () => clientFallback(nextTurnNumber),
+    );
+    setTurnNumber(nextTurnNumber);
+    setCurrentQuestion(nextQuestion);
+    setMessages([...updatedMessages, { from: "jesus", text: nextQuestion.question }]);
+    setIsQuestionLoading(false);
   }
 
   return (
