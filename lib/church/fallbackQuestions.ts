@@ -6,8 +6,8 @@ export interface FallbackQuestion {
 }
 
 // Notion "예수님 질문 리스트" 문서의 폴백 질문 세트에서 그대로 가져온 고정 질문.
-// AI 연동 자리 — 실제로는 매 대화마다 새로 생성해야 하지만(F-05), AI 자리가
-// 아직 정해지지 않아 지금은 이 고정 세트로 교회 대화 화면을 완성해둔다.
+// F-05는 매 대화마다 AI(lib/church/generateQuestion.ts)가 새로 질문을 생성하고,
+// 이 세트는 그 호출이 실패했을 때(app/api/church-question)만 쓰는 폴백이다.
 export const FIRST_QUESTIONS: Record<TimeBand, FallbackQuestion> = {
   dawn: {
     question: "좋은 아침이야. 밤새 잘 잤어?",
@@ -31,7 +31,7 @@ export const FIRST_QUESTIONS: Record<TimeBand, FallbackQuestion> = {
   },
 };
 
-// "마무리 질문 (추천 직전)" 섹션에서 가져온 고정 꼬리질문 — 스텁 대화의 2번째 턴.
+// "마무리 질문 (추천 직전)" 섹션에서 가져온 고정 꼬리질문 — 2번째 턴의 폴백.
 export const FOLLOW_UP_QUESTION: FallbackQuestion = {
   question: "지금 마음에 위로가 필요해, 아니면 힘이 나는 게 필요해?",
   choices: ["위로", "힘", "둘 다"],
