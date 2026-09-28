@@ -34,7 +34,10 @@ export const FIRST_QUESTIONS: Record<TimeBand, FallbackQuestion> = {
 
 // "마무리 질문 (추천 직전)" 섹션에서 가져온 고정 꼬리질문 — 2번째 턴 이후
 // 아무 시점에서나 AI 호출이 실패하면 이 질문으로 바로 마무리한다(isFinal: true).
+// 추천 방향을 가르는 질문이라 choices는 서로 겹치지 않는 테마(THEME_OPTIONS의
+// 위로·소망·평안·기쁨)에 하나씩 대응시킨다 — "위로/힘/둘 다"처럼 비슷하거나
+// 정보가 없는 선택지를 두지 않는다.
 export const FOLLOW_UP_QUESTION: FallbackQuestion = {
-  question: "지금 마음에 위로가 필요하세요, 아니면 힘이 나는 게 필요하세요?",
-  choices: ["위로", "힘", "둘 다"],
+  question: "오늘 이 시간이 어떤 시간이 되면 좋겠어요?",
+  choices: ["그냥 토닥여줬으면 해", "다시 힘을 얻고 싶어", "마음이 조용해졌으면 해", "좋은 마음을 나누고 싶어"],
 };
