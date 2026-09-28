@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ConversationTags } from "@/lib/church/types";
+import type { ConversationTags } from "@/lib/analysis/types";
 import type { RecommendationRecord, RecommendResult, SongResult, VerseResult } from "./types";
 
 const RECENCY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;

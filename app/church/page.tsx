@@ -1,16 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BackToStartLink } from "@/components/BackToStartLink";
 import { MoodBadge } from "@/components/world/MoodBadge";
 import { ChurchChat } from "@/components/church/ChurchChat";
 import { ChurchResult } from "@/components/church/ChurchResult";
 import { useWorld } from "@/lib/world/WorldContext";
 import { getMoodForTimeBand, type MoodKey } from "@/lib/world/moods";
 import { getTimeBand } from "@/lib/greeting";
-import { analyzeConversation } from "@/lib/church/analyze";
 import { pickResultLine } from "@/lib/church/resultLines";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
+import type { AnalysisResult, ConversationTags } from "@/lib/analysis/types";
 
 type Phase = "chat" | "loading" | "result" | "error";
 
@@ -21,6 +22,7 @@ export default function ChurchPage() {
   const hasSetMood = useRef(false);
   const { flyTo, setMood } = useWorld();
   const [phase, setPhase] = useState<Phase>("chat");
+  const [tags, setTags] = useState<AnalysisResult | null>(null);
   const [result, setResult] = useState<RecommendResult | null>(null);
   const [resultLine, setResultLine] = useState("");
   const [songRetries, setSongRetries] = useState(0);
@@ -41,15 +43,14 @@ export default function ChurchPage() {
   }, [setMood]);
 
   const fetchRecommendation = useCallback(
-    async (include?: { verse?: boolean; song?: boolean }) => {
+    async (tagsToUse: ConversationTags, include?: { verse?: boolean; song?: boolean }) => {
       setPhase("loading");
       try {
-        const tags = analyzeConversation();
         const history = getRecommendationHistory();
         const response = await fetch("/api/recommend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tags, history, include }),
+          body: JSON.stringify({ tags: tagsToUse, history, include }),
         });
         if (!response.ok) throw new Error("recommend_failed");
 
@@ -72,18 +73,36 @@ export default function ChurchPage() {
     [],
   );
 
-  const handleChatFinish = useCallback(() => {
-    void fetchRecommendation();
-  }, [fetchRecommendation]);
+  const handleChatFinish = useCallback(
+    async (transcript: string) => {
+      setPhase("loading");
+      try {
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript }),
+        });
+        if (!response.ok) throw new Error("analyze_failed");
+
+        const analyzed = (await response.json()) as AnalysisResult;
+        setTags(analyzed);
+        await fetchRecommendation(analyzed);
+      } catch {
+        setPhase("error");
+      }
+    },
+    [fetchRecommendation],
+  );
 
   const handleRetrySong = useCallback(() => {
-    if (songRetries >= MAX_SONG_RETRIES) return;
+    if (!tags || songRetries >= MAX_SONG_RETRIES) return;
     setSongRetries((count) => count + 1);
-    void fetchRecommendation({ verse: false, song: true });
-  }, [fetchRecommendation, songRetries]);
+    void fetchRecommendation(tags, { verse: false, song: true });
+  }, [fetchRecommendation, songRetries, tags]);
 
   const handleRestart = useCallback(() => {
     setPhase("chat");
+    setTags(null);
     setResult(null);
     setResultLine("");
     setSongRetries(0);
@@ -126,6 +145,12 @@ export default function ChurchPage() {
           </button>
         </div>
       )}
+
+      <div className="pointer-events-none absolute left-4 top-[calc(16px+env(safe-area-inset-top,0px))]">
+        <div className="pointer-events-auto">
+          <BackToStartLink />
+        </div>
+      </div>
 
       {mood && (
         <div className="pointer-events-none absolute right-4 top-[calc(16px+env(safe-area-inset-top,0px))]">

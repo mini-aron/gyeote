@@ -11,7 +11,11 @@ interface ChatMessage {
   text: string;
 }
 
-export function ChurchChat({ onFinish }: { onFinish: () => void }) {
+function formatTranscript(messages: ChatMessage[]): string {
+  return messages.map((m) => `${m.from === "jesus" ? "예수님" : "나"}: ${m.text}`).join("\n");
+}
+
+export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => void }) {
   const firstQuestion = useMemo(() => FIRST_QUESTIONS[getTimeBand(new Date())], []);
   const [turn, setTurn] = useState<1 | 2>(1);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -26,13 +30,16 @@ export function ChurchChat({ onFinish }: { onFinish: () => void }) {
     if (!trimmed) return;
 
     setFreeText("");
-    setMessages((prev) => [...prev, { from: "user", text: trimmed }]);
+    // setMessages는 비동기라 방금 추가한 답변이 messages 상태엔 아직 안
+    // 반영돼 있다 — onFinish로 넘길 transcript는 이 변수로 직접 조립한다.
+    const updatedMessages = [...messages, { from: "user" as const, text: trimmed }];
+    setMessages(updatedMessages);
 
     if (turn === 1) {
       setTurn(2);
-      setMessages((prev) => [...prev, { from: "jesus", text: FOLLOW_UP_QUESTION.question }]);
+      setMessages([...updatedMessages, { from: "jesus", text: FOLLOW_UP_QUESTION.question }]);
     } else {
-      onFinish();
+      onFinish(formatTranscript(updatedMessages));
     }
   }
 
@@ -79,14 +86,6 @@ export function ChurchChat({ onFinish }: { onFinish: () => void }) {
             보내기
           </button>
         </form>
-
-        <button
-          type="button"
-          onClick={onFinish}
-          className="self-center text-xs text-[#f4f1ff]/50 underline underline-offset-4"
-        >
-          바로 추천받기
-        </button>
       </div>
     </div>
   );

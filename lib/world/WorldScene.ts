@@ -9,6 +9,10 @@ const STAR_COUNT = 900;
 const MAX_PIXEL_RATIO = 2;
 const CHURCH_Z = -17;
 const BACKYARD_Z = -29;
+const FIREFLY_COUNT = 26;
+const METEOR_MIN_INTERVAL = 14;
+const METEOR_MAX_INTERVAL = 34;
+const METEOR_DURATION = 0.85;
 
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -83,6 +87,20 @@ export class WorldScene {
   private readonly dust: THREE.Points;
   private readonly dustGeo: THREE.BufferGeometry;
   private readonly dustMat: THREE.PointsMaterial;
+
+  private readonly fireflies: THREE.Points;
+  private readonly fireflyGeo: THREE.BufferGeometry;
+  private readonly fireflyMat: THREE.PointsMaterial;
+  private readonly fireflyBase: Float32Array;
+  private readonly fireflyPhase: Float32Array;
+
+  private readonly meteor: THREE.Mesh;
+  private readonly meteorMat: THREE.MeshBasicMaterial;
+  private readonly meteorFrom = new THREE.Vector3();
+  private readonly meteorTo = new THREE.Vector3();
+  private readonly meteorOffset = new THREE.Vector3();
+  private meteorT = 1;
+  private meteorCooldown = 5 + Math.random() * 6;
 
   private readonly reduceMotion: boolean;
   private readonly cur: MoodState;
@@ -247,6 +265,21 @@ export class WorldScene {
     this.dustGeo = dustGeo;
     this.dustMat = dustMat;
     this.scene.add(this.dust);
+
+    // ---------- Ambient life: fireflies + occasional meteor ----------
+    const { fireflies, fireflyGeo, fireflyMat, fireflyBase, fireflyPhase } =
+      this.buildFireflies(dotTex);
+    this.fireflies = fireflies;
+    this.fireflyGeo = fireflyGeo;
+    this.fireflyMat = fireflyMat;
+    this.fireflyBase = fireflyBase;
+    this.fireflyPhase = fireflyPhase;
+    this.scene.add(this.fireflies);
+
+    const { meteor, meteorMat } = this.buildMeteor();
+    this.meteor = meteor;
+    this.meteorMat = meteorMat;
+    this.scene.add(this.meteor);
 
     // ---------- Mood state ----------
     this.cur = this.buildMoodState("night");
@@ -702,6 +735,99 @@ export class WorldScene {
     return { dust, dustGeo, dustMat };
   }
 
+  private buildFireflies(dotTex: THREE.CanvasTexture) {
+    const base = new Float32Array(FIREFLY_COUNT * 3);
+    const phase = new Float32Array(FIREFLY_COUNT);
+    for (let i = 0; i < FIREFLY_COUNT; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = 1.5 + Math.random() * 6.5;
+      base[i * 3] = Math.cos(ang) * rad;
+      base[i * 3 + 1] = 0.35 + Math.random() * 1.6;
+      base[i * 3 + 2] = BACKYARD_Z + Math.sin(ang) * rad;
+      phase[i] = Math.random() * Math.PI * 2;
+    }
+    const fireflyGeo = new THREE.BufferGeometry();
+    fireflyGeo.setAttribute("position", new THREE.BufferAttribute(base.slice(), 3));
+    const fireflyMat = new THREE.PointsMaterial({
+      size: 0.14,
+      map: dotTex,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      color: 0xd9ff8a,
+      fog: true,
+    });
+    const fireflies = new THREE.Points(fireflyGeo, fireflyMat);
+    return { fireflies, fireflyGeo, fireflyMat, fireflyBase: base, fireflyPhase: phase };
+  }
+
+  private createMeteorTexture(): THREE.CanvasTexture {
+    const c = document.createElement("canvas");
+    c.width = 256;
+    c.height = 32;
+    const g = c.getContext("2d")!;
+    const h = g.createLinearGradient(0, 0, 256, 0);
+    h.addColorStop(0, "rgba(255,255,255,0)");
+    h.addColorStop(0.82, "rgba(255,255,255,.9)");
+    h.addColorStop(1, "rgba(255,255,255,1)");
+    g.fillStyle = h;
+    g.fillRect(0, 0, 256, 32);
+    g.globalCompositeOperation = "destination-in";
+    const v = g.createLinearGradient(0, 0, 0, 32);
+    v.addColorStop(0, "rgba(0,0,0,0)");
+    v.addColorStop(0.5, "rgba(0,0,0,1)");
+    v.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = v;
+    g.fillRect(0, 0, 256, 32);
+    return new THREE.CanvasTexture(c);
+  }
+
+  private buildMeteor() {
+    const meteorMat = new THREE.MeshBasicMaterial({
+      map: this.createMeteorTexture(),
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      fog: false,
+      color: 0xffffff,
+    });
+    const meteor = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), meteorMat);
+    meteor.renderOrder = -8;
+    meteor.scale.set(11, 0.5, 1);
+    return { meteor, meteorMat };
+  }
+
+  /** Kicks off one shooting-star pass across the sky dome, aimed roughly ahead of the camera. */
+  private triggerMeteor(): void {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.PI * (0.14 + Math.random() * 0.22);
+    const r = 300;
+    this.meteorFrom.set(
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.cos(phi),
+      r * Math.sin(phi) * Math.sin(theta),
+    );
+    const dropAngle = Math.random() * Math.PI * 2;
+    const travel = new THREE.Vector3(
+      Math.cos(dropAngle),
+      -0.5 - Math.random() * 0.3,
+      Math.sin(dropAngle),
+    )
+      .normalize()
+      .multiplyScalar(55 + Math.random() * 25);
+    this.meteorTo.copy(this.meteorFrom).add(travel);
+
+    const camRight = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0);
+    const camUp = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 1);
+    const angle = Math.atan2(travel.dot(camUp), travel.dot(camRight));
+    this.meteor.quaternion.copy(this.camera.quaternion);
+    this.meteor.rotateZ(angle);
+
+    this.meteorT = 0;
+  }
+
   private buildMoodState(initial: MoodKey): MoodState {
     const preset = MOODS[initial];
     const state = {} as MoodState;
@@ -798,6 +924,7 @@ export class WorldScene {
     this.starMat.opacity = cur.star;
     this.dustMat.opacity = cur.dust * 0.7;
     this.dustMat.color.copy(cur.dustColor);
+    this.fireflyMat.opacity = cur.firefly;
 
     for (const glow of this.windowGlows) {
       (glow.material as THREE.SpriteMaterial).opacity = 0.16 + windowAmt * 0.42;
@@ -861,6 +988,31 @@ export class WorldScene {
       if (positions[iy] > 15) positions[iy] = 0.2;
     }
     this.dustGeo.attributes.position.needsUpdate = true;
+
+    const fireflyPositions = this.fireflyGeo.attributes.position.array as Float32Array;
+    for (let i = 0; i < FIREFLY_COUNT; i++) {
+      const ph = this.fireflyPhase[i];
+      fireflyPositions[i * 3] = this.fireflyBase[i * 3] + Math.sin(this.time * 0.6 + ph) * 0.5;
+      fireflyPositions[i * 3 + 1] =
+        this.fireflyBase[i * 3 + 1] + Math.sin(this.time * 0.9 + ph * 1.7) * 0.35;
+      fireflyPositions[i * 3 + 2] =
+        this.fireflyBase[i * 3 + 2] + Math.cos(this.time * 0.5 + ph) * 0.5;
+    }
+    this.fireflyGeo.attributes.position.needsUpdate = true;
+
+    if (this.meteorT < 1) {
+      this.meteorT = Math.min(1, this.meteorT + dt / METEOR_DURATION);
+      this.meteorOffset.lerpVectors(this.meteorFrom, this.meteorTo, this.meteorT);
+      this.meteor.position.copy(this.camera.position).add(this.meteorOffset);
+      this.meteorMat.opacity = Math.sin(Math.PI * this.meteorT) * this.cur.star * 0.9;
+    } else if (!this.reduceMotion) {
+      this.meteorCooldown -= dt;
+      if (this.meteorCooldown <= 0 && this.cur.star > 0.3) {
+        this.triggerMeteor();
+        this.meteorCooldown =
+          METEOR_MIN_INTERVAL + Math.random() * (METEOR_MAX_INTERVAL - METEOR_MIN_INTERVAL);
+      }
+    }
 
     this.renderer.render(this.scene, this.camera);
   }
