@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# 로컬 LLM(분석) 호출 로그 — 개인 로컬 기록, 공유 대상 아님
+/.logs
+
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
