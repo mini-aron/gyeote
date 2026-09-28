@@ -40,6 +40,7 @@ export interface MoodPreset {
   mist: number;
   dust: number;
   dustColor: number;
+  firefly: number;
   label: string;
 }
 
@@ -70,6 +71,7 @@ export const MOODS: Record<MoodKey, MoodPreset> = {
     mist: 0.6,
     dust: 0.55,
     dustColor: 0xffe3c4,
+    firefly: 0.12,
     label: "새벽",
   },
   day: {
@@ -98,6 +100,7 @@ export const MOODS: Record<MoodKey, MoodPreset> = {
     mist: 0.22,
     dust: 0.4,
     dustColor: 0xffffff,
+    firefly: 0,
     label: "아침",
   },
   dusk: {
@@ -126,6 +129,7 @@ export const MOODS: Record<MoodKey, MoodPreset> = {
     mist: 0.5,
     dust: 0.7,
     dustColor: 0xffcd99,
+    firefly: 0.55,
     label: "노을",
   },
   night: {
@@ -154,6 +158,7 @@ export const MOODS: Record<MoodKey, MoodPreset> = {
     mist: 0.75,
     dust: 0.85,
     dustColor: 0xffd9a0,
+    firefly: 0.85,
     label: "밤",
   },
 };
@@ -186,4 +191,5 @@ export const NUM_KEYS = [
   "window",
   "mist",
   "dust",
+  "firefly",
 ] as const;
