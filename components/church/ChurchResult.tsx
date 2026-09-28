@@ -6,7 +6,6 @@ import { VerseCard } from "./VerseCard";
 import { SongCard } from "./SongCard";
 import type { RecommendResult } from "@/lib/recommend/types";
 import { buildShareText } from "@/lib/share/buildShareText";
-import { isKakaoConfigured, shareToKakao } from "@/lib/share/kakaoShare";
 
 interface ChurchResultProps {
   resultLine: string;
@@ -46,12 +45,6 @@ export function ChurchResult({
     }
   }
 
-  async function handleKakaoShare() {
-    const shareText = buildShareText(verse, song);
-    if (!shareText) return;
-    await shareToKakao(shareText, window.location.href);
-  }
-
   return (
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
@@ -63,9 +56,6 @@ export function ChurchResult({
             다른 곡 추천받기{retriesLeft > 0 ? ` (${retriesLeft}회 남음)` : ""}
           </ActionButton>
           <ActionLink href="/backyard">뒤뜰에서 더 얘기하기</ActionLink>
-          {isKakaoConfigured && (
-            <ActionButton onClick={handleKakaoShare}>카카오톡 공유</ActionButton>
-          )}
           <ActionButton onClick={handleShare}>공유하기</ActionButton>
           <ActionButton onClick={onRestart}>처음부터</ActionButton>
         </div>
