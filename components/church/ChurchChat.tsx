@@ -79,14 +79,6 @@ export function ChurchChat({ onFinish }: { onFinish: () => void }) {
             보내기
           </button>
         </form>
-
-        <button
-          type="button"
-          onClick={onFinish}
-          className="self-center text-xs text-[#f4f1ff]/50 underline underline-offset-4"
-        >
-          바로 추천받기
-        </button>
       </div>
     </div>
   );
