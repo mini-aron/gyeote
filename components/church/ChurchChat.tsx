@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { LoadingDots } from "@/components/LoadingDots";
 import { getTimeBand } from "@/lib/greeting";
 import {
   FIRST_QUESTIONS,
@@ -83,7 +84,13 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
           {messages.map((message, index) => (
             <ChatBubble key={index} from={message.from} text={message.text} />
           ))}
-          {isQuestionLoading && <ChatBubble from="jesus" text="…" />}
+          {isQuestionLoading && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl bg-white/[0.08] px-4 py-3 text-[#f4f1ff]">
+                <LoadingDots />
+              </div>
+            </div>
+          )}
         </div>
 
         {currentQuestion && !isQuestionLoading && (

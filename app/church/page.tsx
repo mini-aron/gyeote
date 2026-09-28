@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackToStartLink } from "@/components/BackToStartLink";
+import { LoadingDots } from "@/components/LoadingDots";
 import { MoodBadge } from "@/components/world/MoodBadge";
 import { ChurchChat } from "@/components/church/ChurchChat";
 import { ChurchResult } from "@/components/church/ChurchResult";
@@ -113,10 +114,11 @@ export default function ChurchPage() {
       {phase === "chat" && <ChurchChat onFinish={handleChatFinish} />}
 
       {phase === "loading" && (
-        <div className="pointer-events-none flex flex-1 items-center justify-center">
+        <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-3">
           <p className="pointer-events-auto text-sm text-[#f4f1ff]/60">
             잠깐만, 생각하고 있어…
           </p>
+          <LoadingDots className="text-[#f4f1ff]/60" />
         </div>
       )}
 
