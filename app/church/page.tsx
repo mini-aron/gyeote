@@ -116,7 +116,7 @@ export default function ChurchPage() {
       {phase === "loading" && (
         <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-3">
           <p className="pointer-events-auto text-sm text-[#f4f1ff]/60">
-            잠깐만, 생각하고 있어…
+            잠시만요, 생각하고 있어요…
           </p>
           <LoadingDots className="text-[#f4f1ff]/60" />
         </div>
@@ -136,7 +136,7 @@ export default function ChurchPage() {
       {phase === "error" && (
         <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="pointer-events-auto text-sm text-[#f4f1ff]/60">
-            지금은 추천을 가져올 수 없어. 잠시 후 다시 들러줘.
+            지금은 추천을 가져올 수 없어요. 잠시 후 다시 들러주세요.
           </p>
           <button
             type="button"

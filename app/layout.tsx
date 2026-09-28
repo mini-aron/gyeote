@@ -16,7 +16,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "곁에 · gyeote",
   description:
-    "예수님과 짧게 대화하면, 지금 마음에 꼭 맞는 말씀 한 구절과 찬양 한 곡을 골라주는 웹서비스",
+    "짧게 대화하면, 지금 마음에 꼭 맞는 말씀 한 구절과 찬양 한 곡을 골라주는 웹서비스",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

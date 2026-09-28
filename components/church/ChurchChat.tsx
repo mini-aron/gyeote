@@ -9,12 +9,12 @@ import type { GeneratedQuestion } from "@/lib/church/types";
 const FREE_TEXT_MAX_LENGTH = 200;
 
 interface ChatMessage {
-  from: "jesus" | "user";
+  from: "app" | "user";
   text: string;
 }
 
 function formatTranscript(messages: ChatMessage[]): string {
-  return messages.map((m) => `${m.from === "jesus" ? "예수님" : "나"}: ${m.text}`).join("\n");
+  return messages.map((m) => `${m.from === "app" ? "상대방" : "나"}: ${m.text}`).join("\n");
 }
 
 // 네트워크 자체가 실패했을 때만 쓰는 클라이언트 폴백 — 서버(app/api/church-question)가
@@ -52,7 +52,7 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
       .catch(() => clientFallback(1))
       .then((question) => {
         setCurrentQuestion(question);
-        setMessages([{ from: "jesus", text: question.question }]);
+        setMessages([{ from: "app", text: question.question }]);
         setIsQuestionLoading(false);
       });
   }, []);
@@ -79,7 +79,7 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
     );
     setTurnNumber(nextTurnNumber);
     setCurrentQuestion(nextQuestion);
-    setMessages([...updatedMessages, { from: "jesus", text: nextQuestion.question }]);
+    setMessages([...updatedMessages, { from: "app", text: nextQuestion.question }]);
     setIsQuestionLoading(false);
   }
 
@@ -143,12 +143,12 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
 }
 
 function ChatBubble({ from, text }: { from: ChatMessage["from"]; text: string }) {
-  const isJesus = from === "jesus";
+  const isApp = from === "app";
   return (
-    <div className={`flex ${isJesus ? "justify-start" : "justify-end"}`}>
+    <div className={`flex ${isApp ? "justify-start" : "justify-end"}`}>
       <p
         className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
-          isJesus ? "bg-white/[0.08] text-[#f4f1ff]" : "bg-[#ffd9a8]/15 text-[#ffd9a8]"
+          isApp ? "bg-white/[0.08] text-[#f4f1ff]" : "bg-[#ffd9a8]/15 text-[#ffd9a8]"
         }`}
       >
         {text}
