@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { LoadingDots } from "@/components/LoadingDots";
 import { getTimeBand } from "@/lib/greeting";
 import { FIRST_QUESTIONS, FOLLOW_UP_QUESTION } from "@/lib/church/fallbackQuestions";
-import type { GeneratedQuestion } from "@/lib/church/types";
+import { MIN_TURNS, type GeneratedQuestion } from "@/lib/church/types";
 
 const FREE_TEXT_MAX_LENGTH = 200;
+const STOP_HERE_TEXT = "여기까지만 이야기할래";
 
 interface ChatMessage {
   from: "app" | "user";
@@ -83,6 +84,13 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
     setIsQuestionLoading(false);
   }
 
+  function stopHere() {
+    if (isQuestionLoading || !currentQuestion) return;
+    const updatedMessages = [...messages, { from: "user" as const, text: STOP_HERE_TEXT }];
+    setMessages(updatedMessages);
+    onFinish(formatTranscript(updatedMessages));
+  }
+
   return (
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
@@ -111,6 +119,15 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
                 {choice}
               </button>
             ))}
+            {turnNumber >= MIN_TURNS && (
+              <button
+                type="button"
+                onClick={stopHere}
+                className="rounded-full border border-white/10 bg-transparent px-4 py-2 text-sm text-[#f4f1ff]/60 backdrop-blur-md transition-colors hover:bg-white/[0.08] hover:text-[#f4f1ff]/90"
+              >
+                {STOP_HERE_TEXT}
+              </button>
+            )}
           </div>
         )}
 

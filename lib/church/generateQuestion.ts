@@ -1,12 +1,7 @@
 import "server-only";
 import { callOllamaChat, type ChatMessage } from "@/shared/lib/ollama-client";
 import { situationHintFromTime } from "@/lib/analysis/situationHint";
-import type { GeneratedQuestion } from "./types";
-
-// Notion "질문 리스트" 문서는 "총 2~4턴"이 기본 스펙이지만, 대화를 더 길게
-// 끌고 가길 원해서 최소 4턴 · 최대 8턴으로 늘렸다(사용자 결정).
-const MIN_TURNS = 4;
-const MAX_TURNS = 8;
+import { MIN_TURNS, MAX_TURNS, type GeneratedQuestion } from "./types";
 
 const SYSTEM_PROMPT = `너는 "곁에" 서비스에서 사용자와 짧게 대화하며 질문을 건네는 AI다. 사용자에게 건넬 질문 하나와, 그 질문에 사용자가 누르면 바로 대답이 되는 버튼 문구들, 그리고 이 질문을 마지막으로 대화를 마무리할지를 아래 JSON 형식으로만 답하라. 설명, 코드블록 표시, 인사말 등 JSON 이외의 어떤 텍스트도 붙이지 마라.
 
@@ -100,8 +95,8 @@ choices 규칙:
 - 사용자 답이 짧아서 구체적인 이유를 추측하기 어려우면, "궁금해"/"더 말해줄래"처럼 AI가 더 알고 싶다고 요청하는 문장을 choices에 넣지 않는다 — 대신 나쁜 예 3처럼 question 자체를 사용자가 바로 고를 수 있는 구체적인 두 갈래 정도로 좁힌다.
 
 isFinal 규칙 — 지금 몇 번째 질문인지와 대화 내용을 보고 판단한다:
-- 이 대화는 최소 4번, 최대 8번까지 질문을 주고받는다. 4번째 질문 전까지는 항상 isFinal: false.
-- 4번째 질문 이후부터는, 지금까지의 대화로 사용자의 감정과 상황이 충분히 드러났으면 isFinal: true로 하고, 이 질문을 지금까지 나눈 이야기를 자연스럽게 마무리하는 질문으로 만든다.
+- 이 대화는 최소 6번, 최대 10번까지 질문을 주고받는다. 6번째 질문 전까지는 항상 isFinal: false.
+- 6번째 질문 이후부터는, 지금까지의 대화로 사용자의 감정과 상황이 충분히 드러났으면 isFinal: true로 하고, 이 질문을 지금까지 나눈 이야기를 자연스럽게 마무리하는 질문으로 만든다.
 - 아직 부족하면 isFinal: false로 하고, 자연스러운 꼬리질문을 이어간다.
 - 대화 내용에 없는 사실을 지어내거나 단정하지 않는다.`;
 
@@ -172,7 +167,7 @@ async function generateOnce(messages: ChatMessage[]) {
  * 힌트로 인사형 질문을, 그 이후는 transcript에 이어지는 질문을 만든다.
  * isFinal은 모델이 대화 내용을 보고 판단하되, MIN_TURNS번째 턴 전에는 절대
  * 마지막일 수 없고 MAX_TURNS번째 턴은 반드시 마지막이 되도록 서버에서
- * 강제한다 — 모델이 규칙을 안 지켜도 "최소 4턴 · 최대 8턴" 범위를 벗어나지
+ * 강제한다 — 모델이 규칙을 안 지켜도 "최소 6턴 · 최대 10턴" 범위를 벗어나지
  * 않게 하는 방어선.
  * JSON 파싱 실패·스키마 불일치는 로컬 모델의 간헐적 실수인 경우가 많아
  * 1회만 재시도하고, 그래도 실패하거나 네트워크 자체가 죽었으면 그대로
