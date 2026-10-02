@@ -10,6 +10,7 @@ interface TaggedSong {
   title: string;
   artist: string;
   listenUrl: string | null;
+  summary: string | null;
   themes: string[];
   situations: string[];
   moods: string[];
@@ -33,6 +34,7 @@ interface RawSongRow {
   title: string;
   artist: string;
   listen_url: string | null;
+  summary: string | null;
   song_themes: { themes: RawTagLink | null }[] | null;
   song_situations: { situations: RawTagLink | null }[] | null;
   song_moods: { moods: RawTagLink | null }[] | null;
@@ -58,7 +60,7 @@ async function fetchTaggedSongs(supabase: SupabaseClient): Promise<TaggedSong[]>
   const { data, error } = await supabase
     .from("songs")
     .select(
-      "id, title, artist, listen_url, song_themes(themes(name)), song_situations(situations(name)), song_moods(moods(name))",
+      "id, title, artist, listen_url, summary, song_themes(themes(name)), song_situations(situations(name)), song_moods(moods(name))",
     )
     .eq("is_reviewed", true)
     .eq("is_active", true);
@@ -72,6 +74,7 @@ async function fetchTaggedSongs(supabase: SupabaseClient): Promise<TaggedSong[]>
     title: row.title,
     artist: row.artist,
     listenUrl: row.listen_url,
+    summary: row.summary,
     themes: namesOf(row.song_themes, "themes"),
     situations: namesOf(row.song_situations, "situations"),
     moods: namesOf(row.song_moods, "moods"),
@@ -174,7 +177,13 @@ export async function recommend({
       (item) => overlapCount(item.themes, tags.themes) + overlapCount(item.moods, tags.moods),
     ]);
     song = picked
-      ? { id: picked.id, title: picked.title, artist: picked.artist, listenUrl: picked.listenUrl }
+      ? {
+          id: picked.id,
+          title: picked.title,
+          artist: picked.artist,
+          listenUrl: picked.listenUrl,
+          summary: picked.summary,
+        }
       : null;
   }
 

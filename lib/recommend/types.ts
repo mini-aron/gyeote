@@ -10,6 +10,9 @@ export interface SongResult {
   title: string;
   artist: string;
   listenUrl: string | null;
+  // 이 곡이 전달하려는 주제·흐름 요약 — generateResultLine이 결과 문구를 쓸 때 참고한다.
+  // 가사 없이 임포트된 곡은 null.
+  summary: string | null;
 }
 
 export interface RecommendationRecord {

@@ -66,9 +66,11 @@ async function generateOnce(params: GenerateResultLineParams): Promise<string> {
   lines.push(
     `이번에 추천하는 말씀(이 문장을 그대로 옮겨 쓰지 말 것): ${verse ? `${verse.reference} — ${verse.body}` : "없음"}`,
     `이번에 추천하는 찬양: ${song ? `${song.title} (아티스트: ${song.artist})` : "없음"}`,
-    "",
-    "위 내용을 바탕으로 결과 화면에 보여줄 짧은 글을 써줘.",
   );
+  if (song?.summary) {
+    lines.push(`이 찬양이 전달하는 주제·흐름(참고용 — 가사를 아는 척 인용하지 말 것): ${song.summary}`);
+  }
+  lines.push("", "위 내용을 바탕으로 결과 화면에 보여줄 짧은 글을 써줘.");
 
   const messages: ChatMessage[] = [
     { role: "system", content: SYSTEM_PROMPT },
