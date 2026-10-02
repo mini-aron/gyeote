@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BackToStartLink } from "@/components/BackToStartLink";
 import { CrisisNotice } from "@/components/CrisisNotice";
 import { LoadingDots } from "@/components/LoadingDots";
@@ -8,6 +8,7 @@ import { BackyardInput } from "@/components/backyard/BackyardInput";
 import { BackyardResult } from "@/components/backyard/BackyardResult";
 import { useWorld } from "@/lib/world/WorldContext";
 import { saveDraft } from "@/lib/backyard/draft";
+import { combineWithChurchContext, takeChurchContext } from "@/lib/backyard/churchContext";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
 import type { AnalysisResult } from "@/lib/analysis/types";
@@ -24,17 +25,26 @@ export default function BackyardPage() {
   const [result, setResult] = useState<RecommendResult | null>(null);
   const [encouragement, setEncouragement] = useState("");
   const [songRetries, setSongRetries] = useState(0);
+  const [churchTranscript, setChurchTranscript] = useState("");
+  const hasTakenChurchContext = useRef(false);
 
   useEffect(() => {
     flyTo("backyard");
   }, [flyTo]);
 
+  useEffect(() => {
+    // takeChurchContext는 읽으면서 지우므로 Strict Mode 두 번째 실행이 빈 값으로 덮어쓰지 않게 막는다.
+    if (hasTakenChurchContext.current) return;
+    hasTakenChurchContext.current = true;
+    setChurchTranscript(takeChurchContext());
+  }, []);
+
   const fetchRecommendation = useCallback(
     async (
       tagsToUse: AnalysisResult,
-      writtenText: string,
+      fullText: string,
       include?: { verse?: boolean; song?: boolean },
-    ) => {
+    ): Promise<boolean> => {
       setPhase("loading");
       try {
         const history = getRecommendationHistory();
@@ -46,7 +56,7 @@ export default function BackyardPage() {
             history,
             include,
             mode: "backyard",
-            text: include?.verse === false ? undefined : writtenText,
+            text: include?.verse === false ? undefined : fullText,
           }),
         });
         if (!response.ok) throw new Error("recommend_failed");
@@ -63,9 +73,10 @@ export default function BackyardPage() {
         });
         setEncouragement((prev) => data.resultLine ?? prev);
         setPhase("result");
+        return true;
       } catch {
-        saveDraft(writtenText);
         setPhase("error");
+        return false;
       }
     },
     [],
@@ -73,13 +84,14 @@ export default function BackyardPage() {
 
   const handleInputFinish = useCallback(
     async (writtenText: string) => {
-      setText(writtenText);
+      const fullText = combineWithChurchContext(churchTranscript, writtenText);
+      setText(fullText);
       setPhase("loading");
       try {
         const response = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcript: writtenText, source: "backyard" }),
+          body: JSON.stringify({ transcript: fullText, source: "backyard" }),
         });
         if (!response.ok) throw new Error("analyze_failed");
 
@@ -89,14 +101,14 @@ export default function BackyardPage() {
           return;
         }
         setTags(analyzed);
-        await fetchRecommendation(analyzed, writtenText);
+        if (!(await fetchRecommendation(analyzed, fullText))) saveDraft(writtenText);
       } catch {
         // BackyardInput이 제출 시 임시 저장을 지우므로, 실패하면 다시 저장해 글을 잃지 않게 한다.
         saveDraft(writtenText);
         setPhase("error");
       }
     },
-    [fetchRecommendation],
+    [churchTranscript, fetchRecommendation],
   );
 
   const handleRetrySong = useCallback(() => {
@@ -105,7 +117,7 @@ export default function BackyardPage() {
     void fetchRecommendation(tags, text, { verse: false, song: true });
   }, [fetchRecommendation, songRetries, tags, text]);
 
-  const handleRestart = useCallback(() => {
+  const resetResult = useCallback(() => {
     setPhase("input");
     setText("");
     setTags(null);
@@ -114,9 +126,16 @@ export default function BackyardPage() {
     setSongRetries(0);
   }, []);
 
+  const handleRestart = useCallback(() => {
+    resetResult();
+    setChurchTranscript("");
+  }, [resetResult]);
+
   return (
     <main className="pointer-events-none relative flex min-h-dvh flex-1 flex-col text-[#f4f1ff]">
-      {phase === "input" && <BackyardInput onFinish={handleInputFinish} />}
+      {phase === "input" && (
+        <BackyardInput onFinish={handleInputFinish} hasChurchContext={churchTranscript.length > 0} />
+      )}
 
       {phase === "loading" && (
         <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-3">
@@ -148,7 +167,7 @@ export default function BackyardPage() {
           </p>
           <button
             type="button"
-            onClick={handleRestart}
+            onClick={resetResult}
             className="pointer-events-auto rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm"
           >
             처음부터

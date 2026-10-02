@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { pickOpeningLine } from "@/lib/backyard/openingLines";
+import { CHURCH_CONTINUATION_LINE, pickOpeningLine } from "@/lib/backyard/openingLines";
 import { getDraft, saveDraft, clearDraft } from "@/lib/backyard/draft";
 import { useSpeechRecognition } from "@/lib/backyard/useSpeechRecognition";
 import { useTypewriterAppend } from "@/lib/backyard/useTypewriterAppend";
@@ -11,7 +11,13 @@ const MAX_LENGTH = 1000;
 const SHORT_TEXT_THRESHOLD = 20;
 const SHORT_TEXT_NUDGE = "조금 더 이야기해주실 수 있을까요? 편하게 이어서 쓰셔도 괜찮아요.";
 
-export function BackyardInput({ onFinish }: { onFinish: (text: string) => void }) {
+export function BackyardInput({
+  onFinish,
+  hasChurchContext = false,
+}: {
+  onFinish: (text: string) => void;
+  hasChurchContext?: boolean;
+}) {
   const [openingLine, setOpeningLine] = useState("");
   const [text, setText] = useState("");
   const [nudge, setNudge] = useState<string | null>(null);
@@ -56,7 +62,8 @@ export function BackyardInput({ onFinish }: { onFinish: (text: string) => void }
   function handleFinish() {
     const trimmed = text.trim();
     // F-02 규칙: 20자 미만이면 한 번만 더 물어보고, 그래도 짧으면 그대로 진행.
-    if (trimmed.length < SHORT_TEXT_THRESHOLD && !hasNudged.current) {
+    // 교회 대화가 이어진 경우엔 이미 재료가 있어 다시 묻지 않는다.
+    if (!hasChurchContext && trimmed.length < SHORT_TEXT_THRESHOLD && !hasNudged.current) {
       hasNudged.current = true;
       setNudge(SHORT_TEXT_NUDGE);
       return;
@@ -69,7 +76,7 @@ export function BackyardInput({ onFinish }: { onFinish: (text: string) => void }
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
         <p className="max-w-[80%] self-start rounded-2xl bg-white/[0.08] px-4 py-2 text-sm leading-relaxed text-[#f4f1ff]">
-          {nudge ?? openingLine ?? " "}
+          {nudge ?? (hasChurchContext ? CHURCH_CONTINUATION_LINE : openingLine)}
         </p>
 
         <div className="flex flex-col gap-2">
