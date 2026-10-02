@@ -80,7 +80,7 @@ function parseAnalysisResult(raw: string): AnalysisResult {
 
 const TEXT_LABEL: Record<AnalysisSource, string> = {
   church: "대화 기록",
-  backyard: "사용자가 뒤뜰에 털어놓은 글 (대화가 아니라 혼자 길게 쓴 글)",
+  backyard: "사용자가 뒤뜰에 털어놓은 글 (혼자 길게 쓴 글 — 앞서 교회에서 나눈 대화가 함께 붙어 있을 수 있음)",
 };
 
 /**

@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { VerseCard } from "./VerseCard";
 import { SongCard } from "./SongCard";
 import type { RecommendResult } from "@/lib/recommend/types";
@@ -14,6 +13,7 @@ interface ChurchResultProps {
   retriesLeft: number;
   onRetrySong: () => void;
   onRestart: () => void;
+  onMoveToBackyard: () => void;
 }
 
 export function ChurchResult({
@@ -23,6 +23,7 @@ export function ChurchResult({
   retriesLeft,
   onRetrySong,
   onRestart,
+  onMoveToBackyard,
 }: ChurchResultProps) {
   async function handleShare() {
     const shareText = buildShareText(verse, song);
@@ -55,7 +56,7 @@ export function ChurchResult({
           <ActionButton onClick={onRetrySong} disabled={retriesLeft <= 0}>
             다른 곡 추천받기{retriesLeft > 0 ? ` (${retriesLeft}회 남음)` : ""}
           </ActionButton>
-          <ActionLink href="/backyard">뒤뜰에서 더 얘기하기</ActionLink>
+          <ActionButton onClick={onMoveToBackyard}>뒤뜰에서 더 얘기하기</ActionButton>
           <ActionButton onClick={handleShare}>공유하기</ActionButton>
           <ActionButton onClick={onRestart}>처음부터</ActionButton>
         </div>
@@ -82,16 +83,5 @@ function ActionButton({
     >
       {children}
     </button>
-  );
-}
-
-function ActionLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-2 text-[#f4f1ff]/80 transition-colors hover:bg-white/[0.1]"
-    >
-      {children}
-    </Link>
   );
 }

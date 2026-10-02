@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BackToStartLink } from "@/components/BackToStartLink";
 import { CrisisNotice } from "@/components/CrisisNotice";
 import { LoadingDots } from "@/components/LoadingDots";
@@ -8,6 +9,7 @@ import { MoodBadge } from "@/components/world/MoodBadge";
 import { ChurchChat } from "@/components/church/ChurchChat";
 import { ChurchResult } from "@/components/church/ChurchResult";
 import { useWorld } from "@/lib/world/WorldContext";
+import { saveChurchContext } from "@/lib/backyard/churchContext";
 import { getMoodForTimeBand, type MoodKey } from "@/lib/world/moods";
 import { getTimeBand } from "@/lib/greeting";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
@@ -27,6 +29,8 @@ export default function ChurchPage() {
   const [result, setResult] = useState<RecommendResult | null>(null);
   const [resultLine, setResultLine] = useState("");
   const [songRetries, setSongRetries] = useState(0);
+  const [transcript, setTranscript] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     flyTo("church");
@@ -77,13 +81,14 @@ export default function ChurchPage() {
   );
 
   const handleChatFinish = useCallback(
-    async (transcript: string) => {
+    async (chatTranscript: string) => {
+      setTranscript(chatTranscript);
       setPhase("loading");
       try {
         const response = await fetch("/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcript }),
+          body: JSON.stringify({ transcript: chatTranscript }),
         });
         if (!response.ok) throw new Error("analyze_failed");
 
@@ -113,11 +118,22 @@ export default function ChurchPage() {
     setResult(null);
     setResultLine("");
     setSongRetries(0);
+    setTranscript("");
   }, []);
+
+  const handleMoveToBackyard = useCallback(
+    (chatTranscript: string) => {
+      saveChurchContext(chatTranscript);
+      router.push("/backyard");
+    },
+    [router],
+  );
 
   return (
     <main className="pointer-events-none relative flex min-h-dvh flex-1 flex-col text-[#f4f1ff]">
-      {phase === "chat" && <ChurchChat onFinish={handleChatFinish} />}
+      {phase === "chat" && (
+        <ChurchChat onFinish={handleChatFinish} onMoveToBackyard={handleMoveToBackyard} />
+      )}
 
       {phase === "loading" && (
         <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-3">
@@ -136,6 +152,7 @@ export default function ChurchPage() {
           retriesLeft={MAX_SONG_RETRIES - songRetries}
           onRetrySong={handleRetrySong}
           onRestart={handleRestart}
+          onMoveToBackyard={() => handleMoveToBackyard(transcript)}
         />
       )}
 
