@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackToStartLink } from "@/components/BackToStartLink";
+import { CrisisNotice } from "@/components/CrisisNotice";
 import { LoadingDots } from "@/components/LoadingDots";
 import { MoodBadge } from "@/components/world/MoodBadge";
 import { ChurchChat } from "@/components/church/ChurchChat";
@@ -13,7 +14,7 @@ import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/
 import type { RecommendResult } from "@/lib/recommend/types";
 import type { AnalysisResult } from "@/lib/analysis/types";
 
-type Phase = "chat" | "loading" | "result" | "error";
+type Phase = "chat" | "loading" | "result" | "crisis" | "error";
 
 const MAX_SONG_RETRIES = 3;
 
@@ -87,6 +88,10 @@ export default function ChurchPage() {
         if (!response.ok) throw new Error("analyze_failed");
 
         const analyzed = (await response.json()) as AnalysisResult;
+        if (analyzed.crisis) {
+          setPhase("crisis");
+          return;
+        }
         setTags(analyzed);
         await fetchRecommendation(analyzed);
       } catch {
@@ -133,6 +138,8 @@ export default function ChurchPage() {
           onRestart={handleRestart}
         />
       )}
+
+      {phase === "crisis" && <CrisisNotice onRestart={handleRestart} />}
 
       {phase === "error" && (
         <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">

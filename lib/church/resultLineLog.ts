@@ -7,6 +7,7 @@ const LOG_FILE = path.join(LOG_DIR, "result-line.log");
 
 interface ResultLineLogEntry {
   source: "ai" | "fallback";
+  mode?: "church" | "backyard";
   elapsedMs: number;
   resultLine: string;
   error?: string;

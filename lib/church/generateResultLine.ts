@@ -25,7 +25,7 @@ const SYSTEM_PROMPT = `너는 "곁에" 서비스에서 사용자와 나눈 대�
 const MAX_LENGTH = 220;
 const MIN_QUOTE_CHECK_LENGTH = 8;
 
-function sanitize(raw: string): string {
+export function sanitizeGeneratedText(raw: string): string {
   const trimmed = raw.trim();
   const fenced = trimmed.match(/^```(?:\w*)?\s*([\s\S]*?)\s*```$/);
   const unfenced = fenced ? fenced[1].trim() : trimmed;
@@ -35,7 +35,7 @@ function sanitize(raw: string): string {
 // 모델이 규칙을 어기고 말씀 구절을 그대로 옮겨 쓰는 경우를 대비한 방어선 —
 // 공백을 무시하고 verse.body의 8자 이상 연속 구간이 결과 글에 그대로
 // 나타나면 인용으로 간주한다.
-function containsVerseQuote(text: string, verseBody: string): boolean {
+export function containsVerseQuote(text: string, verseBody: string): boolean {
   const normalize = (value: string) => value.replace(/\s+/g, "");
   const normText = normalize(text);
   const normVerse = normalize(verseBody);
@@ -78,7 +78,7 @@ async function generateOnce(params: GenerateResultLineParams): Promise<string> {
   ];
 
   const raw = await callOllamaChat(messages);
-  const text = sanitize(raw);
+  const text = sanitizeGeneratedText(raw);
 
   if (!text || text.length > MAX_LENGTH) {
     throw new Error(`결과 글 응답이 비어있거나 너무 깁니다 (${text.length}자): ${text}`);

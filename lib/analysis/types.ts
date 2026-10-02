@@ -6,10 +6,13 @@ export interface ConversationTags {
 }
 
 // F-03/F-06 명세의 분석 출력 JSON 그대로. summary/efforts/reason은
-// F-07(결과 글쓰기)에서 쓸 재료 — 지금은 저장만 하고 화면에 쓰지 않는다.
+// F-04/F-07(결과 글쓰기)·기도제목 정리에서 쓸 재료.
 export interface AnalysisResult extends ConversationTags {
   direction: string;
   summary: string;
   efforts: string[];
   reason: string;
+  crisis: boolean;
 }
+
+export type AnalysisSource = "church" | "backyard";
