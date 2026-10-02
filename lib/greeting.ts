@@ -1,7 +1,17 @@
 export type TimeBand = "dawn" | "morning" | "afternoon" | "evening" | "night";
 
+// 서버(배포 환경은 보통 UTC)와 사용자 기기의 로컬 타임존이 달라 생기는 불일치를 막기 위해 한국 시간대로 고정해서 읽는다.
+function getSeoulHour(date: Date): number {
+  const hour = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    hour: "numeric",
+    hourCycle: "h23",
+  }).format(date);
+  return Number(hour);
+}
+
 export function getTimeBand(date: Date): TimeBand {
-  const hour = date.getHours();
+  const hour = getSeoulHour(date);
   if (hour >= 5 && hour < 7) return "dawn";
   if (hour >= 7 && hour < 12) return "morning";
   if (hour >= 12 && hour < 18) return "afternoon";
