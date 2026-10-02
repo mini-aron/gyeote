@@ -526,7 +526,16 @@ export class WorldScene {
       panel.rotation.z = -sgn * pitch;
       church.add(panel);
     }
-    this.box(church, 0.44, 0.4, 11.6, 0, 5.2 + half * Math.tan(pitch), 0, this.roofMat);
+    const ridgeY = 5.2 + half * Math.tan(pitch);
+    this.box(church, 0.44, 0.4, 11.6, 0, ridgeY, 0, this.roofMat);
+
+    // Finials cap the ridge ends, echoing the spire's 4-sided cone.
+    for (const sgn of [-1, 1]) {
+      const finial = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 4), this.trimMat);
+      finial.position.set(0, ridgeY + 0.6, sgn * 5.8);
+      finial.rotation.y = Math.PI / 4;
+      church.add(finial);
+    }
 
     const towerZ = 6.4;
     this.box(church, 3, 10.5, 3, 0, 5.25, towerZ, this.stoneMat);
@@ -568,9 +577,43 @@ export class WorldScene {
       addWindow(1.05, 2.5, 3.22, 1.5, wz, Math.PI / 2);
       addWindow(1.05, 2.5, -3.22, 1.5, wz, -Math.PI / 2);
     }
+    // Buttresses sit in the gaps between the nave's side windows, capped like the tower trim.
+    const buttressZs = [-4.6, -1.6, 1.6, 4.6];
+    for (const sgn of [-1, 1]) {
+      for (const bz of buttressZs) {
+        this.box(church, 0.45, 4.6, 0.6, sgn * 3.425, 2.3, bz, this.stoneMat);
+        this.box(church, 0.55, 0.18, 0.7, sgn * 3.425, 4.69, bz, this.trimMat);
+      }
+    }
+    // Quoins straddle the nave's four corners to break up the flat wall edges.
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        this.box(church, 0.5, 5.2, 0.5, sx * 3.2, 2.6, sz * 5.5, this.trimMat);
+      }
+    }
+    // Eave-line cornice along the two long walls (gable ends are left alone).
+    for (const sgn of [-1, 1]) {
+      this.box(church, 0.12, 0.16, 11.2, sgn * 3.26, 5.1, 0, this.trimMat);
+    }
+
+    // Tower side windows, matching the front's arch style at a smaller scale.
+    addWindow(0.7, 1.5, 1.52, 6.3, towerZ, Math.PI / 2);
+    addWindow(0.7, 1.5, -1.52, 6.3, towerZ, -Math.PI / 2);
+
     addWindow(1.15, 2.6, 0, 5.4, towerZ + 1.52, 0);
-    addWindow(1.5, 3.1, 0, 0.05, towerZ + 1.52, 0);
     this.box(church, 1.2, 1.7, 0.22, 0, 9.1, towerZ + 1.5, this.roofMat);
+
+    // Entrance: the arch glow from addWindow becomes a lit transom above an
+    // actual wood door, with a trim frame and a couple of steps below it.
+    const doorZ = towerZ + 1.52;
+    addWindow(1.5, 3.1, 0, 0.05, doorZ, 0);
+    const doorMat = new THREE.MeshLambertMaterial({ color: 0x4a3526 });
+    for (const sgn of [-1, 1]) {
+      this.box(church, 0.63, 2.2, 0.1, sgn * 0.335, 1.1, doorZ + 0.04, doorMat);
+      this.box(church, 0.18, 3.2, 0.2, sgn * 0.72, 1.6, doorZ - 0.07, this.trimMat);
+    }
+    this.box(church, 1.9, 0.14, 0.5, 0, 0.14, doorZ + 0.25, this.trimMat);
+    this.box(church, 2.3, 0.14, 0.5, 0, 0.07, doorZ + 0.65, this.stoneMat);
   }
 
   private buildDistantTrees(): void {
