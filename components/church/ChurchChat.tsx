@@ -8,6 +8,10 @@ import { MIN_TURNS, type GeneratedQuestion } from "@/lib/church/types";
 
 const FREE_TEXT_MAX_LENGTH = 200;
 const STOP_HERE_TEXT = "여기까지만 이야기할래";
+const LONG_ANSWER_THRESHOLD = 40;
+const BACKYARD_SUGGESTION_TEXT = "여기서 다 못 한 얘기가 있으면, 뒤뜰에서 편하게 들을게요.";
+
+type BackyardSuggestion = "none" | "shown" | "done";
 
 interface ChatMessage {
   from: "app" | "user";
@@ -35,12 +39,20 @@ async function fetchQuestion(turnNumber: number, transcript: string): Promise<Ge
   return (await response.json()) as GeneratedQuestion;
 }
 
-export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => void }) {
+export function ChurchChat({
+  onFinish,
+  onMoveToBackyard,
+}: {
+  onFinish: (transcript: string) => void;
+  onMoveToBackyard: (transcript: string) => void;
+}) {
   const [turnNumber, setTurnNumber] = useState(1);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<GeneratedQuestion | null>(null);
   const [isQuestionLoading, setIsQuestionLoading] = useState(true);
   const [freeText, setFreeText] = useState("");
+  // 명세: 뒤뜰은 한 번만 권하고, 거절하면 다시 권하지 않는다.
+  const [backyardSuggestion, setBackyardSuggestion] = useState<BackyardSuggestion>("none");
   const hasFetchedFirstQuestion = useRef(false);
 
   useEffect(() => {
@@ -71,6 +83,10 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
     if (currentQuestion.isFinal) {
       onFinish(formatTranscript(updatedMessages));
       return;
+    }
+
+    if (backyardSuggestion === "none" && trimmed.length >= LONG_ANSWER_THRESHOLD) {
+      setBackyardSuggestion("shown");
     }
 
     setIsQuestionLoading(true);
@@ -106,6 +122,28 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
             </div>
           )}
         </div>
+
+        {backyardSuggestion === "shown" && (
+          <div className="flex flex-col gap-2 rounded-2xl border border-[#ffd9a8]/20 bg-[#ffd9a8]/[0.06] px-4 py-3">
+            <p className="text-sm leading-relaxed text-[#f4f1ff]">{BACKYARD_SUGGESTION_TEXT}</p>
+            <div className="flex gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => onMoveToBackyard(formatTranscript(messages))}
+                className="rounded-full border border-[#ffd9a8]/30 bg-[#ffd9a8]/15 px-3 py-1.5 text-[#ffd9a8]"
+              >
+                뒤뜰로 갈래
+              </button>
+              <button
+                type="button"
+                onClick={() => setBackyardSuggestion("done")}
+                className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[#f4f1ff]/70"
+              >
+                여기서 계속할래
+              </button>
+            </div>
+          </div>
+        )}
 
         {currentQuestion && !isQuestionLoading && (
           <div className="flex flex-wrap gap-2">
@@ -154,6 +192,16 @@ export function ChurchChat({ onFinish }: { onFinish: (transcript: string) => voi
             보내기
           </button>
         </form>
+
+        {backyardSuggestion !== "shown" && (
+          <button
+            type="button"
+            onClick={() => onMoveToBackyard(formatTranscript(messages))}
+            className="self-center text-xs text-[#f4f1ff]/50 underline-offset-4 transition-colors hover:text-[#f4f1ff]/80 hover:underline"
+          >
+            뒤뜰에서 더 얘기할래
+          </button>
+        )}
       </div>
     </div>
   );

@@ -10,3 +10,6 @@ export function pickOpeningLine(): string {
   const index = Math.floor(Math.random() * OPENING_LINES.length);
   return OPENING_LINES[index];
 }
+
+export const CHURCH_CONTINUATION_LINE =
+  "교회에서 나눈 이야기, 여기서 이어서 들을게요. 다 못 한 말이 있으면 편하게 적어주세요.";

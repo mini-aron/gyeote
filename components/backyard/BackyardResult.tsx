@@ -1,34 +1,57 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { VerseCard } from "./VerseCard";
-import { SongCard } from "./SongCard";
+import { useState, type ReactNode } from "react";
+import { VerseCard } from "@/components/church/VerseCard";
+import { SongCard } from "@/components/church/SongCard";
+import { PrayerTopicCard } from "./PrayerTopicCard";
 import type { RecommendResult } from "@/lib/recommend/types";
 import { buildShareText } from "@/lib/share/buildShareText";
 
-interface ChurchResultProps {
-  resultLine: string;
+type PrayerStatus = "idle" | "loading" | "done" | "error";
+
+interface BackyardResultProps {
+  encouragement: string;
+  summary: string;
   verse: RecommendResult["verse"];
   song: RecommendResult["song"];
   retriesLeft: number;
   onRetrySong: () => void;
   onRestart: () => void;
-  onMoveToBackyard: () => void;
 }
 
-export function ChurchResult({
-  resultLine,
+export function BackyardResult({
+  encouragement,
+  summary,
   verse,
   song,
   retriesLeft,
   onRetrySong,
   onRestart,
-  onMoveToBackyard,
-}: ChurchResultProps) {
+}: BackyardResultProps) {
+  const [prayerStatus, setPrayerStatus] = useState<PrayerStatus>("idle");
+  const [prayerTopics, setPrayerTopics] = useState<string[]>([]);
+
+  async function handlePrayerTopic() {
+    setPrayerStatus("loading");
+    try {
+      const response = await fetch("/api/prayer-topic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ summary }),
+      });
+      if (!response.ok) throw new Error("prayer_topic_failed");
+      const data = (await response.json()) as { topics: string[] };
+      setPrayerTopics(data.topics);
+      setPrayerStatus("done");
+    } catch {
+      setPrayerStatus("error");
+    }
+  }
+
   async function handleShare() {
     const shareText = buildShareText(verse, song);
     if (!shareText) return;
-    const url = window.location.href;
+    const url = window.location.origin;
 
     if (navigator.share) {
       try {
@@ -49,14 +72,21 @@ export function ChurchResult({
   return (
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
-        <p className="text-sm leading-relaxed text-[#f4f1ff]/90">{resultLine}</p>
+        {encouragement && (
+          <p className="whitespace-pre-line text-sm leading-relaxed text-[#f4f1ff]/90">{encouragement}</p>
+        )}
         <VerseCard verse={verse} />
         <SongCard song={song} />
+        {prayerStatus !== "idle" && (
+          <PrayerTopicCard status={prayerStatus} topics={prayerTopics} onRetry={handlePrayerTopic} />
+        )}
         <div className="flex flex-wrap gap-2 text-xs">
           <ActionButton onClick={onRetrySong} disabled={retriesLeft <= 0}>
             다른 곡 추천받기{retriesLeft > 0 ? ` (${retriesLeft}회 남음)` : ""}
           </ActionButton>
-          <ActionButton onClick={onMoveToBackyard}>뒤뜰에서 더 얘기하기</ActionButton>
+          {summary && prayerStatus === "idle" && (
+            <ActionButton onClick={handlePrayerTopic}>기도제목으로 정리하기</ActionButton>
+          )}
           <ActionButton onClick={handleShare}>공유하기</ActionButton>
           <ActionButton onClick={onRestart}>처음부터</ActionButton>
         </div>
