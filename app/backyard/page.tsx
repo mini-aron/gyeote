@@ -1,30 +1,158 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BackToStartLink } from "@/components/BackToStartLink";
+import { CrisisNotice } from "@/components/CrisisNotice";
+import { LoadingDots } from "@/components/LoadingDots";
 import { BackyardInput } from "@/components/backyard/BackyardInput";
+import { BackyardResult } from "@/components/backyard/BackyardResult";
 import { useWorld } from "@/lib/world/WorldContext";
+import { saveDraft } from "@/lib/backyard/draft";
+import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
+import type { RecommendResult } from "@/lib/recommend/types";
+import type { AnalysisResult } from "@/lib/analysis/types";
 
-type Phase = "input" | "submitted";
+type Phase = "input" | "loading" | "result" | "crisis" | "error";
+
+const MAX_SONG_RETRIES = 3;
 
 export default function BackyardPage() {
   const { flyTo } = useWorld();
   const [phase, setPhase] = useState<Phase>("input");
+  const [text, setText] = useState("");
+  const [tags, setTags] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<RecommendResult | null>(null);
+  const [encouragement, setEncouragement] = useState("");
+  const [songRetries, setSongRetries] = useState(0);
 
   useEffect(() => {
     flyTo("backyard");
   }, [flyTo]);
 
+  const fetchRecommendation = useCallback(
+    async (
+      tagsToUse: AnalysisResult,
+      writtenText: string,
+      include?: { verse?: boolean; song?: boolean },
+    ) => {
+      setPhase("loading");
+      try {
+        const history = getRecommendationHistory();
+        const response = await fetch("/api/recommend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tags: tagsToUse,
+            history,
+            include,
+            mode: "backyard",
+            text: include?.verse === false ? undefined : writtenText,
+          }),
+        });
+        if (!response.ok) throw new Error("recommend_failed");
+
+        const data = (await response.json()) as RecommendResult;
+        setResult((prev) => ({
+          verse: include?.verse === false ? (prev?.verse ?? null) : data.verse,
+          song: include?.song === false ? (prev?.song ?? null) : data.song,
+        }));
+        recordRecommendation({
+          songId: include?.song === false ? null : (data.song?.id ?? null),
+          verseId: include?.verse === false ? null : (data.verse?.id ?? null),
+          date: new Date().toISOString(),
+        });
+        setEncouragement((prev) => data.resultLine ?? prev);
+        setPhase("result");
+      } catch {
+        saveDraft(writtenText);
+        setPhase("error");
+      }
+    },
+    [],
+  );
+
+  const handleInputFinish = useCallback(
+    async (writtenText: string) => {
+      setText(writtenText);
+      setPhase("loading");
+      try {
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript: writtenText, source: "backyard" }),
+        });
+        if (!response.ok) throw new Error("analyze_failed");
+
+        const analyzed = (await response.json()) as AnalysisResult;
+        if (analyzed.crisis) {
+          setPhase("crisis");
+          return;
+        }
+        setTags(analyzed);
+        await fetchRecommendation(analyzed, writtenText);
+      } catch {
+        // BackyardInput이 제출 시 임시 저장을 지우므로, 실패하면 다시 저장해 글을 잃지 않게 한다.
+        saveDraft(writtenText);
+        setPhase("error");
+      }
+    },
+    [fetchRecommendation],
+  );
+
+  const handleRetrySong = useCallback(() => {
+    if (!tags || songRetries >= MAX_SONG_RETRIES) return;
+    setSongRetries((count) => count + 1);
+    void fetchRecommendation(tags, text, { verse: false, song: true });
+  }, [fetchRecommendation, songRetries, tags, text]);
+
+  const handleRestart = useCallback(() => {
+    setPhase("input");
+    setText("");
+    setTags(null);
+    setResult(null);
+    setEncouragement("");
+    setSongRetries(0);
+  }, []);
+
   return (
     <main className="pointer-events-none relative flex min-h-dvh flex-1 flex-col text-[#f4f1ff]">
-      {phase === "input" && <BackyardInput onFinish={() => setPhase("submitted")} />}
+      {phase === "input" && <BackyardInput onFinish={handleInputFinish} />}
 
-      {phase === "submitted" && (
-        <div className="pointer-events-none flex flex-1 items-center justify-center px-6 text-center">
-          {/* F-03 분석·F-04 결과는 아직 구현 전 — 다음 단계 */}
+      {phase === "loading" && (
+        <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-3">
           <p className="pointer-events-auto text-sm text-[#f4f1ff]/60">
-            여기까지 잘 들었어요. 분석·추천 화면은 다음 단계에서 만들 예정이에요.
+            천천히 읽고 있어요…
           </p>
+          <LoadingDots className="text-[#f4f1ff]/60" />
+        </div>
+      )}
+
+      {phase === "result" && (
+        <BackyardResult
+          encouragement={encouragement}
+          summary={tags?.summary ?? ""}
+          verse={result?.verse ?? null}
+          song={result?.song ?? null}
+          retriesLeft={MAX_SONG_RETRIES - songRetries}
+          onRetrySong={handleRetrySong}
+          onRestart={handleRestart}
+        />
+      )}
+
+      {phase === "crisis" && <CrisisNotice onRestart={handleRestart} />}
+
+      {phase === "error" && (
+        <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+          <p className="pointer-events-auto text-sm text-[#f4f1ff]/60">
+            지금은 추천을 가져올 수 없어요. 잠시 후 다시 들러주세요.
+          </p>
+          <button
+            type="button"
+            onClick={handleRestart}
+            className="pointer-events-auto rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm"
+          >
+            처음부터
+          </button>
         </div>
       )}
 

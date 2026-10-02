@@ -7,7 +7,7 @@ const LOG_DIR = path.join(process.cwd(), ".logs");
 const LOG_FILE = path.join(LOG_DIR, "analysis.log");
 
 interface AnalysisLogEntry {
-  source: "ai" | "fallback";
+  source: "ai" | "fallback" | "crisis";
   elapsedMs: number;
   transcript: string;
   result: AnalysisResult;
