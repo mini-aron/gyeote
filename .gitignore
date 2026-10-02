@@ -44,6 +44,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# supabase: 데이터 전용 SQL(INSERT/UPDATE/DELETE — 시드/임포트/일회성 데이터
+# 교정)은 구조 변경(DDL)이 아니라서 git에 커밋하지 않고 로컬에만 둔다.
+# 새로 만들 때 파일명에 `_data.sql`을 붙이면 자동으로 무시된다.
+supabase/migrations/*_data.sql
+
 # oh-my-claudecode: keep project-memory.json (shared project context),
 # ignore per-session/machine runtime state
 /.omc/state

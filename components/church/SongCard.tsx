@@ -4,7 +4,7 @@ export function SongCard({ song }: { song: SongResult | null }) {
   if (!song) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-4 text-sm text-[#f4f1ff]/50">
-        지금은 어울리는 찬양을 찾지 못했어.
+        지금은 어울리는 찬양을 찾지 못했어요.
       </div>
     );
   }

@@ -251,7 +251,7 @@ export class WorldScene {
     this.buildChurch(church, dotTex);
 
     this.buildDistantTrees();
-    this.buildWell();
+    this.buildWell(dotTex);
     this.buildBackyardTrees();
 
     // ---------- Light shafts / mist / dust ----------
@@ -526,7 +526,16 @@ export class WorldScene {
       panel.rotation.z = -sgn * pitch;
       church.add(panel);
     }
-    this.box(church, 0.44, 0.4, 11.6, 0, 5.2 + half * Math.tan(pitch), 0, this.roofMat);
+    const ridgeY = 5.2 + half * Math.tan(pitch);
+    this.box(church, 0.44, 0.4, 11.6, 0, ridgeY, 0, this.roofMat);
+
+    // Finials cap the ridge ends, echoing the spire's 4-sided cone.
+    for (const sgn of [-1, 1]) {
+      const finial = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 4), this.trimMat);
+      finial.position.set(0, ridgeY + 0.6, sgn * 5.8);
+      finial.rotation.y = Math.PI / 4;
+      church.add(finial);
+    }
 
     const towerZ = 6.4;
     this.box(church, 3, 10.5, 3, 0, 5.25, towerZ, this.stoneMat);
@@ -568,9 +577,43 @@ export class WorldScene {
       addWindow(1.05, 2.5, 3.22, 1.5, wz, Math.PI / 2);
       addWindow(1.05, 2.5, -3.22, 1.5, wz, -Math.PI / 2);
     }
+    // Buttresses sit in the gaps between the nave's side windows, capped like the tower trim.
+    const buttressZs = [-4.6, -1.6, 1.6, 4.6];
+    for (const sgn of [-1, 1]) {
+      for (const bz of buttressZs) {
+        this.box(church, 0.45, 4.6, 0.6, sgn * 3.425, 2.3, bz, this.stoneMat);
+        this.box(church, 0.55, 0.18, 0.7, sgn * 3.425, 4.69, bz, this.trimMat);
+      }
+    }
+    // Quoins straddle the nave's four corners to break up the flat wall edges.
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        this.box(church, 0.5, 5.2, 0.5, sx * 3.2, 2.6, sz * 5.5, this.trimMat);
+      }
+    }
+    // Eave-line cornice along the two long walls (gable ends are left alone).
+    for (const sgn of [-1, 1]) {
+      this.box(church, 0.12, 0.16, 11.2, sgn * 3.26, 5.1, 0, this.trimMat);
+    }
+
+    // Tower side windows, matching the front's arch style at a smaller scale.
+    addWindow(0.7, 1.5, 1.52, 6.3, towerZ, Math.PI / 2);
+    addWindow(0.7, 1.5, -1.52, 6.3, towerZ, -Math.PI / 2);
+
     addWindow(1.15, 2.6, 0, 5.4, towerZ + 1.52, 0);
-    addWindow(1.5, 3.1, 0, 0.05, towerZ + 1.52, 0);
     this.box(church, 1.2, 1.7, 0.22, 0, 9.1, towerZ + 1.5, this.roofMat);
+
+    // Entrance: the arch glow from addWindow becomes a lit transom above an
+    // actual wood door, with a trim frame and a couple of steps below it.
+    const doorZ = towerZ + 1.52;
+    addWindow(1.5, 3.1, 0, 0.05, doorZ, 0);
+    const doorMat = new THREE.MeshLambertMaterial({ color: 0x4a3526 });
+    for (const sgn of [-1, 1]) {
+      this.box(church, 0.63, 2.2, 0.1, sgn * 0.335, 1.1, doorZ + 0.04, doorMat);
+      this.box(church, 0.18, 3.2, 0.2, sgn * 0.72, 1.6, doorZ - 0.07, this.trimMat);
+    }
+    this.box(church, 1.9, 0.14, 0.5, 0, 0.14, doorZ + 0.25, this.trimMat);
+    this.box(church, 2.3, 0.14, 0.5, 0, 0.07, doorZ + 0.65, this.stoneMat);
   }
 
   private buildDistantTrees(): void {
@@ -595,7 +638,7 @@ export class WorldScene {
     }
   }
 
-  private buildWell(): void {
+  private buildWell(dotTex: THREE.CanvasTexture): void {
     const well = new THREE.Group();
     well.position.set(0, 0, BACKYARD_Z);
     this.scene.add(well);
@@ -610,6 +653,25 @@ export class WorldScene {
     rim.position.y = 0.85;
     well.add(rim);
 
+    // A ring of low curb stones reads as a flower-bed/garden edge even from
+    // the backyard station's distance, widening the well's silhouette.
+    const borderCount = 10;
+    const borderRadius = 1.75;
+    for (let i = 0; i < borderCount; i++) {
+      const angle = (i / borderCount) * Math.PI * 2;
+      const curb = this.box(
+        well,
+        0.32,
+        0.22,
+        0.32,
+        Math.cos(angle) * borderRadius,
+        0.11,
+        Math.sin(angle) * borderRadius,
+        this.stoneMat,
+      );
+      curb.rotation.y = angle;
+    }
+
     // Wood parts are a fixed color — not worth mood-tracking for one small prop.
     const woodMat = new THREE.MeshLambertMaterial({ color: 0x5b4636 });
     for (const side of [-1, 1]) {
@@ -617,23 +679,29 @@ export class WorldScene {
       post.position.set(side * 0.95, 0.85 + 0.75, 0);
       well.add(post);
     }
+    const beamY = 0.85 + 1.5;
     const beam = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.12, 0.12), woodMat);
-    beam.position.set(0, 0.85 + 1.5, 0);
+    beam.position.set(0, beamY, 0);
     well.add(beam);
 
     const roofPitch = 0.5;
     const roofHalf = 1.3;
     const roofSlope = roofHalf / Math.cos(roofPitch);
+    const roofBaseY = beamY + 0.1;
     for (const sgn of [-1, 1]) {
       const panel = new THREE.Mesh(new THREE.BoxGeometry(roofSlope, 0.08, 1.6), this.roofMat);
-      panel.position.set(
-        (sgn * roofHalf) / 2,
-        0.85 + 1.5 + (roofHalf * Math.tan(roofPitch)) / 2 + 0.1,
-        0,
-      );
+      panel.position.set((sgn * roofHalf) / 2, roofBaseY + (roofHalf * Math.tan(roofPitch)) / 2, 0);
       panel.rotation.z = -sgn * roofPitch;
       well.add(panel);
     }
+
+    // Ridge cap + finial, echoing the church roof's own ridge trim and spire cap.
+    const ridgeY = roofBaseY + roofHalf * Math.tan(roofPitch);
+    this.box(well, 0.14, 0.1, 1.7, 0, ridgeY, 0, this.trimMat);
+    const finial = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.3, 4), this.trimMat);
+    finial.position.set(0, ridgeY + 0.2, 0);
+    finial.rotation.y = Math.PI / 4;
+    well.add(finial);
 
     const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.9, 4), this.trimMat);
     rope.position.set(0, 0.85 + 1.0, 0);
@@ -642,6 +710,35 @@ export class WorldScene {
     const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.22, 8), woodMat);
     bucket.position.set(0, 0.85 + 0.5, 0);
     well.add(bucket);
+
+    // A lantern post beside the well for a warm point of light at night —
+    // its glow fades with the same mood-driven "window" amount as the church's.
+    const lanternX = 2.6;
+    const lanternZ = 0.9;
+    const lanternPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.7, 6), this.trimMat);
+    lanternPole.position.set(lanternX, 0.85, lanternZ);
+    well.add(lanternPole);
+
+    const lanternHeadY = 1.85;
+    const lanternHead = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.3, 0.22), this.glassMat);
+    lanternHead.position.set(lanternX, lanternHeadY, lanternZ);
+    well.add(lanternHead);
+
+    const lanternGlow = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: dotTex,
+        color: 0xffc27a,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        fog: false,
+      }),
+    );
+    lanternGlow.position.set(lanternX, lanternHeadY, lanternZ);
+    lanternGlow.scale.set(1.1, 1.1, 1);
+    well.add(lanternGlow);
+    this.windowGlows.push(lanternGlow);
   }
 
   private buildBackyardTrees(): void {
@@ -660,12 +757,27 @@ export class WorldScene {
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.38, th * 0.42, 6), trunkMat);
       trunk.position.set(tx, th * 0.21, tz);
       this.scene.add(trunk);
-      const crown = new THREE.Mesh(
-        new THREE.CylinderGeometry(0, 1.8 + Math.random() * 0.6, th, 7),
+
+      const crownRadius = 1.8 + Math.random() * 0.6;
+      const crownY = th * 0.42 + th * 0.42;
+      const crown = new THREE.Mesh(new THREE.CylinderGeometry(0, crownRadius, th, 7), leafMat);
+      crown.position.set(tx, crownY, tz);
+      this.scene.add(crown);
+
+      // A smaller second tier on top makes the crown read as fuller/less uniform.
+      const topHeight = th * 0.4;
+      const topY = crownY + th / 2 - topHeight * 0.3;
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0, crownRadius * 0.55, topHeight, 6), leafMat);
+      top.position.set(tx, topY, tz);
+      this.scene.add(top);
+
+      // A low bush at the base ties the trunk into the ground plane.
+      const bush = new THREE.Mesh(
+        new THREE.CylinderGeometry(0, 0.45 + Math.random() * 0.2, 0.55, 6),
         leafMat,
       );
-      crown.position.set(tx, th * 0.42 + th * 0.42, tz);
-      this.scene.add(crown);
+      bush.position.set(tx, 0.27, tz);
+      this.scene.add(bush);
     }
   }
 

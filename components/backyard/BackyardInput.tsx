@@ -9,7 +9,7 @@ import { VoiceButton } from "./VoiceButton";
 
 const MAX_LENGTH = 1000;
 const SHORT_TEXT_THRESHOLD = 20;
-const SHORT_TEXT_NUDGE = "조금 더 이야기해줄 수 있어? 편하게 이어서 써도 괜찮아.";
+const SHORT_TEXT_NUDGE = "조금 더 이야기해주실 수 있을까요? 편하게 이어서 쓰셔도 괜찮아요.";
 
 export function BackyardInput({ onFinish }: { onFinish: (text: string) => void }) {
   const [openingLine, setOpeningLine] = useState("");
@@ -78,7 +78,7 @@ export function BackyardInput({ onFinish }: { onFinish: (text: string) => void }
             onChange={handleChange}
             maxLength={MAX_LENGTH}
             rows={6}
-            placeholder="편하게 적어봐"
+            placeholder="편하게 적어보세요"
             className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-relaxed text-[#f4f1ff] placeholder:text-[#f4f1ff]/40 focus:outline-none"
           />
           <span className="self-end text-xs text-[#f4f1ff]/40">
@@ -89,11 +89,11 @@ export function BackyardInput({ onFinish }: { onFinish: (text: string) => void }
         <div className="flex flex-col items-center gap-2">
           <VoiceButton status={voiceStatus} onStart={startVoice} onStop={stopVoice} />
           {voiceStatus === "listening" && (
-            <span className="text-xs text-[#f4f1ff]/50">듣고 있어…</span>
+            <span className="text-xs text-[#f4f1ff]/50">듣고 있어요…</span>
           )}
           {voiceStatus === "error" && (
             <span className="text-xs text-[#f4f1ff]/50">
-              마이크를 쓸 수 없어서 직접 입력으로 이어갈게
+              마이크를 쓸 수 없어서 직접 입력으로 이어갈게요
             </span>
           )}
         </div>
