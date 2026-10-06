@@ -20,7 +20,6 @@ export function LoginSheet() {
       provider: "kakao",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        scopes: "profile_nickname profile_image",
       },
     });
     if (error) {
