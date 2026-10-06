@@ -37,29 +37,20 @@ function readTranscript(raw: unknown): { church: ChurchTurn[] | null; backyardTe
   };
 }
 
-export async function getDayDetail(
-  user: User,
-  date: string,
-): Promise<{ records: DayCounselRecord[]; events: DayEvent[] }> {
-  const supabase = await createSupabaseServerClient();
-  const [recordRows, eventRows] = await Promise.all([
-    supabase
-      .from("counsel_records")
-      .select("id, mode, verse_id, song_id, result_line, analysis, transcript, created_at")
-      .eq("user_id", user.id)
-      .eq("local_date", date)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("calendar_events")
-      .select("id, event_time, title, memo")
-      .eq("user_id", user.id)
-      .eq("event_date", date)
-      .order("event_time", { ascending: true, nullsFirst: true })
-      .order("created_at", { ascending: true }),
-  ]);
+const RECORD_COLUMNS = "id, mode, verse_id, song_id, result_line, analysis, transcript, created_at";
 
-  if (recordRows.error || eventRows.error) throw new Error("calendar_day_failed");
-  const rows = recordRows.data ?? [];
+interface CounselRecordRow {
+  id: string;
+  mode: DayCounselRecord["mode"];
+  verse_id: string | null;
+  song_id: string | null;
+  result_line: string | null;
+  analysis: unknown;
+  transcript: unknown;
+  created_at: string;
+}
+
+async function hydrateRecords(rows: CounselRecordRow[]): Promise<DayCounselRecord[]> {
   const verseIds = [...new Set(rows.map((row) => row.verse_id).filter(Boolean))] as string[];
   const songIds = [...new Set(rows.map((row) => row.song_id).filter(Boolean))] as string[];
   const [verses, songs] = await Promise.all([
@@ -78,7 +69,7 @@ export async function getDayDetail(
   const verseById = new Map((verses.data ?? []).map((row) => [row.id as string, row]));
   const songById = new Map((songs.data ?? []).map((row) => [row.id as string, row]));
 
-  const records: DayCounselRecord[] = rows.map((row) => {
+  return rows.map((row) => {
     const verse = row.verse_id ? verseById.get(row.verse_id) : undefined;
     const song = row.song_id ? songById.get(row.song_id) : undefined;
     return {
@@ -111,6 +102,46 @@ export async function getDayDetail(
       ...readTranscript(row.transcript),
     };
   });
+}
+
+export async function getCounselRecord(user: User, date: string, id: string): Promise<DayCounselRecord | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("counsel_records")
+    .select(RECORD_COLUMNS)
+    .eq("user_id", user.id)
+    .eq("local_date", date)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error("calendar_record_failed");
+  if (!data) return null;
+  const [record] = await hydrateRecords([data as CounselRecordRow]);
+  return record;
+}
+
+export async function getDayDetail(
+  user: User,
+  date: string,
+): Promise<{ records: DayCounselRecord[]; events: DayEvent[] }> {
+  const supabase = await createSupabaseServerClient();
+  const [recordRows, eventRows] = await Promise.all([
+    supabase
+      .from("counsel_records")
+      .select(RECORD_COLUMNS)
+      .eq("user_id", user.id)
+      .eq("local_date", date)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("calendar_events")
+      .select("id, event_time, title, memo")
+      .eq("user_id", user.id)
+      .eq("event_date", date)
+      .order("event_time", { ascending: true, nullsFirst: true })
+      .order("created_at", { ascending: true }),
+  ]);
+
+  if (recordRows.error || eventRows.error) throw new Error("calendar_day_failed");
+  const records = await hydrateRecords((recordRows.data ?? []) as CounselRecordRow[]);
 
   const events: DayEvent[] = (eventRows.data ?? []).map((row) => ({
     id: row.id,
