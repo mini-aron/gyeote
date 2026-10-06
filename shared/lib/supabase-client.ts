@@ -13,8 +13,8 @@ if (!supabaseUrl || !serviceRoleKey) {
 /**
  * Service-role client — bypasses RLS, so it only ever runs in server code
  * (Route Handlers, Server Actions). Every table has RLS enabled with zero
- * policies (see 기술 아키텍처 · ERD 3번), so this is the only client that can
- * read/write content tables at all right now.
+ * policies (see 기술 아키텍처 · ERD 3번), so this client does all content
+ * reads/writes; user-scoped access goes through supabase-server.ts.
  */
 export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false },
