@@ -5,6 +5,7 @@ import { VerseCard } from "./VerseCard";
 import { SongCard } from "./SongCard";
 import type { RecommendResult } from "@/lib/recommend/types";
 import { buildShareText } from "@/lib/share/buildShareText";
+import { GLASS_CARD } from "@/components/glassCard";
 
 interface ChurchResultProps {
   resultLine: string;
@@ -49,7 +50,9 @@ export function ChurchResult({
   return (
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
-        <p className="text-sm leading-relaxed text-[#f4f1ff]/90">{resultLine}</p>
+        {resultLine && (
+          <p className={`${GLASS_CARD} px-5 py-4 text-sm leading-relaxed text-[#f4f1ff]/90`}>{resultLine}</p>
+        )}
         <VerseCard verse={verse} />
         <SongCard song={song} />
         <div className="flex flex-wrap gap-2 text-xs">
