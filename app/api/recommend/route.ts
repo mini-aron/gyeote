@@ -4,6 +4,17 @@ import { pickResultLine } from "@/lib/church/resultLines";
 import { logResultLine } from "@/lib/church/resultLineLog";
 import type { AnalysisResult } from "@/lib/analysis/types";
 import type { RecommendationRecord, RecommendResult } from "@/lib/recommend/types";
+import { getCurrentUser } from "@/shared/lib/auth";
+import { hasRequiredConsents } from "@/lib/auth/consentStatus";
+import { isUuid } from "@/shared/lib/uuid";
+import {
+  MAX_SONG_REROLLS,
+  applySongReroll,
+  getMemberRecentHistory,
+  readRerollTarget,
+  saveCounselRecord,
+  saveResultLine,
+} from "@/lib/counsel/counselRecords";
 
 interface RecommendRequestBody {
   tags: AnalysisResult;
@@ -11,6 +22,17 @@ interface RecommendRequestBody {
   include?: { verse?: boolean; song?: boolean };
   mode?: "church" | "backyard";
   text?: string;
+  transcript?: unknown;
+  clientRequestId?: unknown;
+  counselRecordId?: unknown;
+}
+
+async function findMember() {
+  try {
+    return await getCurrentUser();
+  } catch {
+    return null;
+  }
 }
 
 async function writeBackyardEncouragement(
@@ -38,7 +60,7 @@ async function writeBackyardEncouragement(
     });
     return encouragement;
   } catch (error) {
-    console.error("[api/recommend] 뒤뜰 응원의 글 생성 실패, 글 없이 진행", error);
+    console.error("[api/recommend] 뒤뜰 응원의 글 생성 실패, 글 없이 진행", error instanceof Error ? error.name : "unknown");
     await logResultLine({
       source: "fallback",
       mode: "backyard",
@@ -57,20 +79,74 @@ export async function POST(request: Request) {
     // 던지므로, try 블록 안에서 불러와야 에러를 여기서 잡아 안내 응답으로 바꿀 수 있다.
     const { supabaseAdmin } = await import("@/shared/lib/supabase-client");
 
+    const user = await findMember();
+    const history = Array.isArray(body.history) ? body.history : [];
+    if (user) history.push(...(await getMemberRecentHistory(supabaseAdmin, user.id)));
+
+    const isSongRetry = body.include?.verse === false;
+
+    if (user && isSongRetry && isUuid(body.counselRecordId)) {
+      // 다른 곡 분기는 실패해도 200 — 4xx면 클라이언트가 결과 화면 전체를 잃는다.
+      const target = await readRerollTarget(supabaseAdmin, user.id, body.counselRecordId);
+      if (target && target.rerollCount >= MAX_SONG_REROLLS) {
+        return NextResponse.json({ verse: null, song: null, counselRecordId: body.counselRecordId, rerollStatus: "limit" });
+      }
+      const { song } = await recommend({
+        supabase: supabaseAdmin,
+        tags: { ...body.tags, ...target?.tags },
+        history,
+        include: { verse: false, song: true },
+      });
+      if (!song) {
+        return NextResponse.json({ verse: null, song: null, counselRecordId: body.counselRecordId, rerollStatus: "no_song" });
+      }
+      if (!target) {
+        return NextResponse.json({ verse: null, song, counselRecordId: null, rerollStatus: "not_saved" });
+      }
+      const applied = await applySongReroll(supabaseAdmin, user.id, body.counselRecordId, song.id);
+      if (applied === "rejected") {
+        return NextResponse.json({ verse: null, song: null, counselRecordId: body.counselRecordId, rerollStatus: "limit" });
+      }
+      return NextResponse.json({
+        verse: null,
+        song,
+        counselRecordId: body.counselRecordId,
+        rerollStatus: applied === "ok" ? "ok" : "not_saved",
+      });
+    }
+
     const { verse, song } = await recommend({
       supabase: supabaseAdmin,
       tags: body.tags,
-      history: body.history ?? [],
+      history,
       include: body.include,
     });
+
+    const mode = body.mode === "backyard" ? "backyard" : "church";
+    let counselRecordId: string | null = null;
+    if (user && !isSongRetry && body.transcript !== undefined) {
+      counselRecordId = await saveCounselRecord({
+        admin: supabaseAdmin,
+        userId: user.id,
+        consented: isUuid(body.clientRequestId) ? await hasRequiredConsents(user.id) : false,
+        clientRequestId: body.clientRequestId,
+        rawTranscript: body.transcript,
+        mode,
+        tags: body.tags,
+        verseId: verse?.id ?? null,
+        songId: song?.id ?? null,
+      });
+    }
 
     // 곡만 다시 뽑는 재시도(include.verse === false)에서는 결과 글을 새로
     // 만들지 않는다 — 처음 만들어진 글이 그대로 유지되도록 클라이언트에
     // resultLine 필드를 아예 보내지 않는다.
-    const result: RecommendResult = { verse, song };
+    const result: RecommendResult = { verse, song, counselRecordId };
+    let generatedLine: string | null = null;
     if (body.include?.verse !== false && body.mode === "backyard") {
       // undefined는 클라이언트가 "기존 글 유지"로 해석하므로 빈 문자열로 보낸다.
-      result.resultLine = (await writeBackyardEncouragement(body, verse, song)) ?? "";
+      generatedLine = (await writeBackyardEncouragement(body, verse, song)) ?? null;
+      result.resultLine = generatedLine ?? "";
     } else if (body.include?.verse !== false) {
       const startedAt = Date.now();
       try {
@@ -78,13 +154,14 @@ export async function POST(request: Request) {
         // 블록 안에서 잡아 폴백 문구로 넘긴다.
         const { generateResultLine } = await import("@/lib/church/generateResultLine");
         result.resultLine = await generateResultLine({ analysis: body.tags, verse, song });
+        generatedLine = result.resultLine;
         await logResultLine({
           source: "ai",
           elapsedMs: Date.now() - startedAt,
           resultLine: result.resultLine,
         });
       } catch (error) {
-        console.error("[api/recommend] 결과 글 생성 실패, 고정 문구로 폴백", error);
+        console.error("[api/recommend] 결과 글 생성 실패, 고정 문구로 폴백", error instanceof Error ? error.name : "unknown");
         result.resultLine = pickResultLine();
         await logResultLine({
           source: "fallback",
@@ -95,9 +172,13 @@ export async function POST(request: Request) {
       }
     }
 
+    if (user && counselRecordId && generatedLine) {
+      await saveResultLine(supabaseAdmin, user.id, counselRecordId, generatedLine);
+    }
+
     return NextResponse.json(result);
   } catch (error) {
-    console.error("[api/recommend] failed", error);
+    console.error("[api/recommend] failed", error instanceof Error ? error.name : "unknown");
     return NextResponse.json(
       { verse: null, song: null, error: "recommend_failed" },
       { status: 500 },

@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(result);
   } catch (error) {
-    console.error("[api/church-question] AI 질문 생성 실패, 고정 질문으로 폴백", error);
+    console.error("[api/church-question] AI 질문 생성 실패, 고정 질문으로 폴백", error instanceof Error ? error.name : "unknown");
     const fallback = fallbackQuestion(body.turnNumber);
     await logQuestion({
       source: "fallback",

@@ -19,6 +19,7 @@ interface ResultLineLogEntry {
  * gitignore 대상이고, 쓰기 실패해도 응답 자체를 막지 않는다.
  */
 export async function logResultLine(entry: ResultLineLogEntry): Promise<void> {
+  if (process.env.NODE_ENV === "production") return;
   try {
     await mkdir(LOG_DIR, { recursive: true });
     const line = JSON.stringify({ timestamp: new Date().toISOString(), ...entry });
