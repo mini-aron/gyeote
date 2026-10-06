@@ -15,19 +15,21 @@ import type { BookmarkKind } from "@/lib/bookmarks/types";
 interface BookmarkButtonProps {
   kind: BookmarkKind;
   id: string;
+  initialBookmarked?: boolean;
   onBeforeLogin?: () => void;
 }
 
-export function BookmarkButton({ kind, id, onBeforeLogin }: BookmarkButtonProps) {
+export function BookmarkButton({ kind, id, initialBookmarked, onBeforeLogin }: BookmarkButtonProps) {
   const status = useSessionStatus();
   const { open } = useLoginSheet();
   const pathname = usePathname();
   const router = useRouter();
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(initialBookmarked ?? false);
   const busy = useRef(false);
 
   useEffect(() => {
-    if (status !== "member") return;
+    // 목록 화면은 서버에서 상태를 한 번에 넘겨준다 — 카드마다 서버 액션을 부르면 요청이 카드 수만큼 순차로 쌓인다.
+    if (status !== "member" || initialBookmarked !== undefined) return;
     let active = true;
     const input = kind === "verse" ? { verseId: id } : { songId: id };
     void getBookmarkStatus(input).then((result) => {
@@ -36,7 +38,7 @@ export function BookmarkButton({ kind, id, onBeforeLogin }: BookmarkButtonProps)
     return () => {
       active = false;
     };
-  }, [status, kind, id]);
+  }, [status, kind, id, initialBookmarked]);
 
   const openLogin = () => {
     onBeforeLogin?.();

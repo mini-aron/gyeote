@@ -9,7 +9,13 @@ import { deleteCounselRecord } from "@/lib/calendar/actions";
 import { formatKstTime } from "@/lib/calendar/dateUtils";
 import type { DayCounselRecord } from "@/lib/calendar/types";
 
-export function CounselRecordCard({ record }: { record: DayCounselRecord }) {
+export function CounselRecordCard({
+  record,
+  bookmarkedIds,
+}: {
+  record: DayCounselRecord;
+  bookmarkedIds: string[];
+}) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState(false);
@@ -34,9 +40,13 @@ export function CounselRecordCard({ record }: { record: DayCounselRecord }) {
       </div>
 
       {record.verse &&
-        (record.verse.isActive ? <VerseCard verse={record.verse} /> : <Unavailable label="말씀" />)}
+        (record.verse.isActive ? (
+          <VerseCard verse={record.verse} bookmarked={bookmarkedIds.includes(record.verse.id)} />
+        ) : <Unavailable label="말씀" />)}
       {record.song &&
-        (record.song.isActive ? <SongCard song={record.song} /> : <Unavailable label="찬양" />)}
+        (record.song.isActive ? (
+          <SongCard song={record.song} bookmarked={bookmarkedIds.includes(record.song.id)} />
+        ) : <Unavailable label="찬양" />)}
 
       {record.resultLine && (
         <p className={`${GLASS_CARD} whitespace-pre-line px-5 py-4 text-sm leading-7`}>{record.resultLine}</p>

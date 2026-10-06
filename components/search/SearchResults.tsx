@@ -10,10 +10,12 @@ export function SearchResults({
   filters,
   verses,
   songs,
+  bookmarkedIds,
 }: {
   filters: SearchFilters;
   verses: SearchPage<VerseResult> | null;
   songs: SearchPage<SongResult> | null;
+  bookmarkedIds: Set<string>;
 }) {
   const page = verses ?? songs;
   const count = page?.items.length ?? 0;
@@ -30,8 +32,12 @@ export function SearchResults({
   return (
     <>
       <p className="px-1 text-xs text-[#f4f1ff]/55">총 {total}개</p>
-      {verses?.items.map((verse) => <VerseCard key={verse.id} verse={verse} />)}
-      {songs?.items.map((song) => <SongCard key={song.id} song={song} />)}
+      {verses?.items.map((verse) => (
+        <VerseCard key={verse.id} verse={verse} bookmarked={bookmarkedIds.has(verse.id)} />
+      ))}
+      {songs?.items.map((song) => (
+        <SongCard key={song.id} song={song} bookmarked={bookmarkedIds.has(song.id)} />
+      ))}
       {total > count && filters.limit < MAX_LIMIT && (
         <Link
           href={buildSearchHref({ ...filters, limit: Math.min(filters.limit + PAGE_SIZE, MAX_LIMIT) })}

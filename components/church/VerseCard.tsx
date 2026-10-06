@@ -10,9 +10,11 @@ const COLLAPSED_BODY_HEIGHT_PX = 112;
 
 export function VerseCard({
   verse,
+  bookmarked,
   onBeforeLogin,
 }: {
   verse: VerseResult | null;
+  bookmarked?: boolean;
   onBeforeLogin?: () => void;
 }) {
   if (!verse) {
@@ -29,7 +31,12 @@ export function VerseCard({
         <p className="text-xs tracking-wide text-[#f4f1ff]/65">
           {verse.reference} · {verse.translation}
         </p>
-        <BookmarkButton kind="verse" id={verse.id} onBeforeLogin={onBeforeLogin} />
+        <BookmarkButton
+          kind="verse"
+          id={verse.id}
+          initialBookmarked={bookmarked}
+          onBeforeLogin={onBeforeLogin}
+        />
       </div>
       <VerseBody key={verse.id} reference={verse.reference} body={verse.body} />
       {(verse.meaning || verse.application) && (

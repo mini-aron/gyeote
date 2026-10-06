@@ -13,9 +13,10 @@ interface DayDetailViewProps {
   date: string;
   records: DayCounselRecord[];
   events: DayEvent[];
+  bookmarkedIds: string[];
 }
 
-export function DayDetailView({ date, records, events }: DayDetailViewProps) {
+export function DayDetailView({ date, records, events, bookmarkedIds }: DayDetailViewProps) {
   const { flyTo } = useWorld();
 
   useEffect(() => {
@@ -43,7 +44,9 @@ export function DayDetailView({ date, records, events }: DayDetailViewProps) {
               이날은 남긴 상담 기록이 없어요.
             </p>
           ) : (
-            records.map((record) => <CounselRecordCard key={record.id} record={record} />)
+            records.map((record) => (
+              <CounselRecordCard key={record.id} record={record} bookmarkedIds={bookmarkedIds} />
+            ))
           )}
         </section>
 

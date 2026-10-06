@@ -4,9 +4,11 @@ import { BookmarkButton } from "@/components/bookmarks/BookmarkButton";
 
 export function SongCard({
   song,
+  bookmarked,
   onBeforeLogin,
 }: {
   song: SongResult | null;
+  bookmarked?: boolean;
   onBeforeLogin?: () => void;
 }) {
   if (!song) {
@@ -28,7 +30,7 @@ export function SongCard({
         <p className="text-sm font-medium text-[#f4f1ff]">{song.title}</p>
         <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
       </div>
-      <BookmarkButton kind="song" id={song.id} onBeforeLogin={onBeforeLogin} />
+      <BookmarkButton kind="song" id={song.id} initialBookmarked={bookmarked} onBeforeLogin={onBeforeLogin} />
       <a
         href={listenHref}
         target="_blank"
