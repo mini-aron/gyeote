@@ -6,6 +6,7 @@ import { SongCard } from "@/components/church/SongCard";
 import { PrayerTopicCard } from "./PrayerTopicCard";
 import type { RecommendResult } from "@/lib/recommend/types";
 import { buildShareText } from "@/lib/share/buildShareText";
+import { savePendingResult } from "@/lib/bookmarks/pendingResult";
 import { GLASS_CARD } from "@/components/glassCard";
 
 type PrayerStatus = "idle" | "loading" | "done" | "error";
@@ -49,6 +50,9 @@ export function BackyardResult({
     }
   }
 
+  const saveSnapshot = () =>
+    savePendingResult({ mode: "backyard", verse, song, resultLine: encouragement });
+
   async function handleShare() {
     const shareText = buildShareText(verse, song);
     if (!shareText) return;
@@ -78,8 +82,8 @@ export function BackyardResult({
             {encouragement}
           </p>
         )}
-        <VerseCard verse={verse} />
-        <SongCard song={song} />
+        <VerseCard verse={verse} onBeforeLogin={saveSnapshot} />
+        <SongCard song={song} onBeforeLogin={saveSnapshot} />
         {prayerStatus !== "idle" && (
           <PrayerTopicCard status={prayerStatus} topics={prayerTopics} onRetry={handlePrayerTopic} />
         )}

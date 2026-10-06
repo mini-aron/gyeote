@@ -1,7 +1,14 @@
 import type { SongResult } from "@/lib/recommend/types";
 import { GLASS_CARD } from "@/components/glassCard";
+import { BookmarkButton } from "@/components/bookmarks/BookmarkButton";
 
-export function SongCard({ song }: { song: SongResult | null }) {
+export function SongCard({
+  song,
+  onBeforeLogin,
+}: {
+  song: SongResult | null;
+  onBeforeLogin?: () => void;
+}) {
   if (!song) {
     return (
       <div className={`${GLASS_CARD} px-5 py-4 text-sm text-[#f4f1ff]/50`}>
@@ -17,10 +24,11 @@ export function SongCard({ song }: { song: SongResult | null }) {
 
   return (
     <div className={`${GLASS_CARD} flex items-center justify-between gap-3 px-5 py-4`}>
-      <div>
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-[#f4f1ff]">{song.title}</p>
         <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
       </div>
+      <BookmarkButton kind="song" id={song.id} onBeforeLogin={onBeforeLogin} />
       <a
         href={listenHref}
         target="_blank"
