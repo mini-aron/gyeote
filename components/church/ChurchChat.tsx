@@ -6,6 +6,7 @@ import { SpeechBubble } from "@/components/SpeechBubble";
 import { getTimeBand } from "@/lib/greeting";
 import { FIRST_QUESTIONS, FOLLOW_UP_QUESTION } from "@/lib/church/fallbackQuestions";
 import { MIN_TURNS, type GeneratedQuestion } from "@/lib/church/types";
+import { buildChurchTurn, type ChurchTurn } from "@/lib/counsel/transcript";
 
 const FREE_TEXT_MAX_LENGTH = 200;
 const STOP_HERE_TEXT = "여기까지만 이야기할래";
@@ -44,11 +45,12 @@ export function ChurchChat({
   onFinish,
   onMoveToBackyard,
 }: {
-  onFinish: (transcript: string) => void;
-  onMoveToBackyard: (transcript: string) => void;
+  onFinish: (transcript: string, turns: ChurchTurn[]) => void;
+  onMoveToBackyard: (transcript: string, turns: ChurchTurn[]) => void;
 }) {
   const [turnNumber, setTurnNumber] = useState(1);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [turns, setTurns] = useState<ChurchTurn[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<GeneratedQuestion | null>(null);
   const [isQuestionLoading, setIsQuestionLoading] = useState(true);
   const [freeText, setFreeText] = useState("");
@@ -71,7 +73,7 @@ export function ChurchChat({
       });
   }, []);
 
-  async function answer(text: string) {
+  async function answer(text: string, answerType: ChurchTurn["answerType"]) {
     const trimmed = text.trim();
     if (!trimmed || isQuestionLoading || !currentQuestion) return;
 
@@ -80,9 +82,14 @@ export function ChurchChat({
     // 반영돼 있다 — onFinish로 넘길 transcript는 이 변수로 직접 조립한다.
     const updatedMessages = [...messages, { from: "user" as const, text: trimmed }];
     setMessages(updatedMessages);
+    const updatedTurns = [
+      ...turns,
+      buildChurchTurn(currentQuestion.question, currentQuestion.choices, trimmed, answerType),
+    ];
+    setTurns(updatedTurns);
 
     if (currentQuestion.isFinal) {
-      onFinish(formatTranscript(updatedMessages));
+      onFinish(formatTranscript(updatedMessages), updatedTurns);
       return;
     }
 
@@ -105,7 +112,11 @@ export function ChurchChat({
     if (isQuestionLoading || !currentQuestion) return;
     const updatedMessages = [...messages, { from: "user" as const, text: STOP_HERE_TEXT }];
     setMessages(updatedMessages);
-    onFinish(formatTranscript(updatedMessages));
+    const updatedTurns = [
+      ...turns,
+      buildChurchTurn(currentQuestion.question, currentQuestion.choices, STOP_HERE_TEXT, "choice"),
+    ];
+    onFinish(formatTranscript(updatedMessages), updatedTurns);
   }
 
   return (
@@ -128,7 +139,7 @@ export function ChurchChat({
             <div className="flex gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => onMoveToBackyard(formatTranscript(messages))}
+                onClick={() => onMoveToBackyard(formatTranscript(messages), turns)}
                 className="rounded-full border border-[#ffd9a8]/30 bg-[#ffd9a8]/15 px-3 py-1.5 text-[#ffd9a8]"
               >
                 뒤뜰로 갈래
@@ -150,7 +161,7 @@ export function ChurchChat({
               <button
                 key={choice}
                 type="button"
-                onClick={() => answer(choice)}
+                onClick={() => answer(choice, "choice")}
                 className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-sm text-[#f4f1ff]/90 backdrop-blur-md transition-colors hover:bg-white/[0.12]"
               >
                 {choice}
@@ -172,7 +183,7 @@ export function ChurchChat({
           className="flex items-center gap-2"
           onSubmit={(event) => {
             event.preventDefault();
-            answer(freeText);
+            answer(freeText, "free");
           }}
         >
           <input
@@ -195,7 +206,7 @@ export function ChurchChat({
         {backyardSuggestion !== "shown" && (
           <button
             type="button"
-            onClick={() => onMoveToBackyard(formatTranscript(messages))}
+            onClick={() => onMoveToBackyard(formatTranscript(messages), turns)}
             className="self-center text-xs text-[#f4f1ff]/50 underline-offset-4 transition-colors hover:text-[#f4f1ff]/80 hover:underline"
           >
             뒤뜰에서 더 얘기할래

@@ -31,3 +31,12 @@ export function getGreeting(date: Date, isReturning: boolean): string {
   const base = GREETINGS[getTimeBand(date)];
   return isReturning ? `또 오셨네요. ${base}` : base;
 }
+
+export function getSeoulDateString(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}

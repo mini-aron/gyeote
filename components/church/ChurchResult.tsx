@@ -5,6 +5,7 @@ import { VerseCard } from "./VerseCard";
 import { SongCard } from "./SongCard";
 import type { RecommendResult } from "@/lib/recommend/types";
 import { buildShareText } from "@/lib/share/buildShareText";
+import { savePendingResult } from "@/lib/bookmarks/pendingResult";
 import { SpeechBubble } from "@/components/SpeechBubble";
 
 interface ChurchResultProps {
@@ -26,6 +27,8 @@ export function ChurchResult({
   onRestart,
   onMoveToBackyard,
 }: ChurchResultProps) {
+  const saveSnapshot = () => savePendingResult({ mode: "church", verse, song, resultLine });
+
   async function handleShare() {
     const shareText = buildShareText(verse, song);
     if (!shareText) return;
@@ -51,8 +54,8 @@ export function ChurchResult({
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
         {resultLine && <SpeechBubble>{resultLine}</SpeechBubble>}
-        <VerseCard verse={verse} />
-        <SongCard song={song} />
+        <VerseCard verse={verse} onBeforeLogin={saveSnapshot} />
+        <SongCard song={song} onBeforeLogin={saveSnapshot} />
         <div className="flex flex-wrap gap-2 text-xs">
           <ActionButton onClick={onRetrySong} disabled={retriesLeft <= 0}>
             다른 곡 추천받기{retriesLeft > 0 ? ` (${retriesLeft}회 남음)` : ""}

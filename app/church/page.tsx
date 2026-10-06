@@ -8,6 +8,8 @@ import { LoadingDots } from "@/components/LoadingDots";
 import { MoodBadge } from "@/components/world/MoodBadge";
 import { ChurchChat } from "@/components/church/ChurchChat";
 import { ChurchResult } from "@/components/church/ChurchResult";
+import { useBottomNavHidden } from "@/components/nav/BottomNavContext";
+import { useResumeResult } from "@/lib/bookmarks/useResumeResult";
 import { useWorld } from "@/lib/world/WorldContext";
 import { saveChurchContext } from "@/lib/backyard/churchContext";
 import { getMoodForTimeBand, type MoodKey } from "@/lib/world/moods";
@@ -15,6 +17,8 @@ import { getTimeBand } from "@/lib/greeting";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
 import type { AnalysisResult } from "@/lib/analysis/types";
+import { createClientRequestId } from "@/lib/counsel/clientRequestId";
+import type { ChurchTurn } from "@/lib/counsel/transcript";
 
 type Phase = "chat" | "loading" | "result" | "crisis" | "error";
 
@@ -30,7 +34,21 @@ export default function ChurchPage() {
   const [resultLine, setResultLine] = useState("");
   const [songRetries, setSongRetries] = useState(0);
   const [transcript, setTranscript] = useState("");
+  const [turns, setTurns] = useState<ChurchTurn[]>([]);
+  const [counselRecordId, setCounselRecordId] = useState<string | null>(null);
+  const clientRequestId = useRef<string | undefined>(undefined);
   const router = useRouter();
+  useBottomNavHidden(phase === "chat");
+
+  useResumeResult("church", {
+    onStart: () => setPhase("loading"),
+    onRestore: (pending) => {
+      setResult({ verse: pending.verse, song: pending.song });
+      setResultLine(pending.resultLine);
+      setSongRetries(MAX_SONG_RETRIES);
+      setPhase("result");
+    },
+  });
 
   useEffect(() => {
     flyTo("church");
@@ -48,22 +66,44 @@ export default function ChurchPage() {
   }, [setMood]);
 
   const fetchRecommendation = useCallback(
-    async (tagsToUse: AnalysisResult, include?: { verse?: boolean; song?: boolean }) => {
+    async (
+      tagsToUse: AnalysisResult,
+      chatTurns: ChurchTurn[],
+      recordId: string | null,
+      include?: { verse?: boolean; song?: boolean },
+    ) => {
       setPhase("loading");
       try {
         const history = getRecommendationHistory();
+        clientRequestId.current ??= createClientRequestId();
         const response = await fetch("/api/recommend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tags: tagsToUse, history, include }),
+          body: JSON.stringify({
+            tags: tagsToUse,
+            history,
+            include,
+            transcript:
+              include?.verse !== false && chatTurns.length > 0
+                ? { version: 1, church: chatTurns }
+                : undefined,
+            clientRequestId: clientRequestId.current,
+            counselRecordId: recordId ?? undefined,
+          }),
         });
         if (!response.ok) throw new Error("recommend_failed");
 
         const data = (await response.json()) as RecommendResult;
         setResult((prev) => ({
           verse: include?.verse === false ? (prev?.verse ?? null) : data.verse,
-          song: include?.song === false ? (prev?.song ?? null) : data.song,
+          song:
+            include?.song === false
+              ? (prev?.song ?? null)
+              : include?.verse === false
+                ? (data.song ?? prev?.song ?? null)
+                : data.song,
         }));
+        if (include?.verse !== false) setCounselRecordId(data.counselRecordId ?? null);
         recordRecommendation({
           songId: include?.song === false ? null : (data.song?.id ?? null),
           verseId: include?.verse === false ? null : (data.verse?.id ?? null),
@@ -74,15 +114,16 @@ export default function ChurchPage() {
         setResultLine((prev) => data.resultLine ?? prev);
         setPhase("result");
       } catch {
-        setPhase("error");
+        setPhase(include?.verse === false ? "result" : "error");
       }
     },
     [],
   );
 
   const handleChatFinish = useCallback(
-    async (chatTranscript: string) => {
+    async (chatTranscript: string, chatTurns: ChurchTurn[]) => {
       setTranscript(chatTranscript);
+      setTurns(chatTurns);
       setPhase("loading");
       try {
         const response = await fetch("/api/analyze", {
@@ -98,7 +139,7 @@ export default function ChurchPage() {
           return;
         }
         setTags(analyzed);
-        await fetchRecommendation(analyzed);
+        await fetchRecommendation(analyzed, chatTurns, null);
       } catch {
         setPhase("error");
       }
@@ -109,8 +150,8 @@ export default function ChurchPage() {
   const handleRetrySong = useCallback(() => {
     if (!tags || songRetries >= MAX_SONG_RETRIES) return;
     setSongRetries((count) => count + 1);
-    void fetchRecommendation(tags, { verse: false, song: true });
-  }, [fetchRecommendation, songRetries, tags]);
+    void fetchRecommendation(tags, turns, counselRecordId, { verse: false, song: true });
+  }, [counselRecordId, fetchRecommendation, songRetries, tags, turns]);
 
   const handleRestart = useCallback(() => {
     setPhase("chat");
@@ -119,11 +160,20 @@ export default function ChurchPage() {
     setResultLine("");
     setSongRetries(0);
     setTranscript("");
+    setTurns([]);
+    setCounselRecordId(null);
+    clientRequestId.current = undefined;
   }, []);
 
   const handleMoveToBackyard = useCallback(
-    (chatTranscript: string) => {
-      saveChurchContext(chatTranscript);
+    (chatTranscript: string, chatTurns: ChurchTurn[], continuesRecord = true) => {
+      // 이미 결과가 저장된 대화는 같은 id를 쓰면 뒤뜰 기록이 중복으로 버려지므로 새 id로 이어간다.
+      clientRequestId.current ??= createClientRequestId();
+      saveChurchContext({
+        transcript: chatTranscript,
+        turns: chatTurns,
+        clientRequestId: continuesRecord ? (clientRequestId.current ?? null) : (createClientRequestId() ?? null),
+      });
       router.push("/backyard");
     },
     [router],
@@ -152,7 +202,7 @@ export default function ChurchPage() {
           retriesLeft={MAX_SONG_RETRIES - songRetries}
           onRetrySong={handleRetrySong}
           onRestart={handleRestart}
-          onMoveToBackyard={() => handleMoveToBackyard(transcript)}
+          onMoveToBackyard={() => handleMoveToBackyard(transcript, turns, false)}
         />
       )}
 

@@ -33,7 +33,7 @@ export function StartScreen() {
   }, []);
 
   return (
-    <div className="pointer-events-none flex min-h-dvh flex-col items-center justify-center px-6 py-12 text-[#f4f1ff]">
+    <div className="pointer-events-none flex min-h-dvh flex-col items-center justify-center px-6 pb-[calc(88px+env(safe-area-inset-bottom,0px))] pt-12 text-[#f4f1ff]">
       <div className="pointer-events-auto flex w-full max-w-sm flex-col items-center gap-10 text-center">
         <div className="flex flex-col items-center gap-3">
           <p className="text-xs tracking-[0.3em] text-[#f4f1ff]/50">GYEOTE</p>

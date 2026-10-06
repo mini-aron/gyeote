@@ -2,12 +2,21 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { GLASS_CARD } from "@/components/glassCard";
+import { BookmarkButton } from "@/components/bookmarks/BookmarkButton";
 import type { VerseResult } from "@/lib/recommend/types";
 
 // 본문을 접었을 때 보이는 높이 — 15px 글씨·28px 줄 간격 기준 약 4줄.
 const COLLAPSED_BODY_HEIGHT_PX = 112;
 
-export function VerseCard({ verse }: { verse: VerseResult | null }) {
+export function VerseCard({
+  verse,
+  bookmarked,
+  onBeforeLogin,
+}: {
+  verse: VerseResult | null;
+  bookmarked?: boolean;
+  onBeforeLogin?: () => void;
+}) {
   if (!verse) {
     return (
       <div className={`${GLASS_CARD} px-5 py-4 text-sm text-[#f4f1ff]/50`}>
@@ -18,9 +27,17 @@ export function VerseCard({ verse }: { verse: VerseResult | null }) {
 
   return (
     <div className={`${GLASS_CARD} px-5 py-4`}>
-      <p className="text-xs tracking-wide text-[#f4f1ff]/65">
-        {verse.reference} · {verse.translation}
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs tracking-wide text-[#f4f1ff]/65">
+          {verse.reference} · {verse.translation}
+        </p>
+        <BookmarkButton
+          kind="verse"
+          id={verse.id}
+          initialBookmarked={bookmarked}
+          onBeforeLogin={onBeforeLogin}
+        />
+      </div>
       <VerseBody key={verse.id} reference={verse.reference} body={verse.body} />
       {(verse.meaning || verse.application) && (
         <div className="mt-3 divide-y divide-white/10 border-t border-white/10">

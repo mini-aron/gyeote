@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { WorldProvider } from "@/lib/world/WorldContext";
 import { LazyWorldBackground } from "@/components/world/LazyWorldBackground";
+import { LoginSheetProvider } from "@/components/auth/LoginSheetContext";
+import { LoginSheet } from "@/components/auth/LoginSheet";
+import { BottomNavProvider } from "@/components/nav/BottomNavContext";
+import { BottomNav } from "@/components/nav/BottomNav";
 // next/font/google는 빌드 중 Google Fonts를 직접 fetch하는데, Turbopack의
 // 폰트 리졸버가 이 과정에서 가끔 "Can't resolve
 // '@vercel/turbopack-next/internal/font/google/font'" 에러를 내며 Vercel
@@ -24,15 +28,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ko" className="h-full antialiased">
       <body className="min-h-full flex flex-col font-sans">
         <WorldProvider>
-          <LazyWorldBackground />
-          {/* Keeps overlay text legible regardless of how bright the 3D scene is behind it. */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-x-0 bottom-0 z-[5] h-[62%] bg-gradient-to-t from-[#0a0816]/90 via-[#0a0816]/50 to-transparent"
-          />
-          <div className="pointer-events-none relative z-10 flex min-h-dvh flex-1 flex-col">
-            {children}
-          </div>
+          <LoginSheetProvider>
+            <BottomNavProvider>
+              <LazyWorldBackground />
+              {/* Keeps overlay text legible regardless of how bright the 3D scene is behind it. */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none fixed inset-x-0 bottom-0 z-[5] h-[62%] bg-gradient-to-t from-[#0a0816]/90 via-[#0a0816]/50 to-transparent"
+              />
+              <div className="pointer-events-none relative z-10 flex min-h-dvh flex-1 flex-col">
+                {children}
+              </div>
+              <BottomNav />
+              <LoginSheet />
+            </BottomNavProvider>
+          </LoginSheetProvider>
         </WorldProvider>
       </body>
     </html>
