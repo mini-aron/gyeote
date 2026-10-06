@@ -5,6 +5,7 @@ import { CHURCH_CONTINUATION_LINE, pickOpeningLine } from "@/lib/backyard/openin
 import { getDraft, saveDraft, clearDraft } from "@/lib/backyard/draft";
 import { useSpeechRecognition } from "@/lib/backyard/useSpeechRecognition";
 import { useTypewriterAppend } from "@/lib/backyard/useTypewriterAppend";
+import { SpeechBubble } from "@/components/SpeechBubble";
 import { VoiceButton } from "./VoiceButton";
 
 const MAX_LENGTH = 1000;
@@ -75,9 +76,7 @@ export function BackyardInput({
   return (
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
-        <p className="max-w-[80%] self-start rounded-2xl bg-white/[0.08] px-4 py-2 text-sm leading-relaxed text-[#f4f1ff]">
-          {nudge ?? (hasChurchContext ? CHURCH_CONTINUATION_LINE : openingLine)}
-        </p>
+        <SpeechBubble>{nudge ?? (hasChurchContext ? CHURCH_CONTINUATION_LINE : openingLine)}</SpeechBubble>
 
         <div className="flex flex-col gap-2">
           <textarea

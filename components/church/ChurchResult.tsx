@@ -6,7 +6,7 @@ import { SongCard } from "./SongCard";
 import type { RecommendResult } from "@/lib/recommend/types";
 import { buildShareText } from "@/lib/share/buildShareText";
 import { savePendingResult } from "@/lib/bookmarks/pendingResult";
-import { GLASS_CARD } from "@/components/glassCard";
+import { SpeechBubble } from "@/components/SpeechBubble";
 
 interface ChurchResultProps {
   resultLine: string;
@@ -53,9 +53,7 @@ export function ChurchResult({
   return (
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
-        {resultLine && (
-          <p className={`${GLASS_CARD} px-5 py-4 text-sm leading-relaxed text-[#f4f1ff]/90`}>{resultLine}</p>
-        )}
+        {resultLine && <SpeechBubble>{resultLine}</SpeechBubble>}
         <VerseCard verse={verse} onBeforeLogin={saveSnapshot} />
         <SongCard song={song} onBeforeLogin={saveSnapshot} />
         <div className="flex flex-wrap gap-2 text-xs">
