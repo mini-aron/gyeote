@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { GLASS_CARD } from "@/components/glassCard";
 
 type Status = "loading" | "done" | "error";
 
@@ -25,7 +26,7 @@ export function PrayerTopicCard({
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-4">
+    <div className={`${GLASS_CARD} px-5 py-4`}>
       <p className="text-xs tracking-wide text-[#f4f1ff]/50">기도제목</p>
 
       {status === "loading" && (

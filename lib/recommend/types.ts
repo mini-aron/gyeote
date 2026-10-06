@@ -3,6 +3,8 @@ export interface VerseResult {
   reference: string;
   body: string;
   translation: string;
+  meaning: string | null;
+  application: string | null;
 }
 
 export interface SongResult {

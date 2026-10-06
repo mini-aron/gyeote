@@ -1,9 +1,10 @@
 import type { SongResult } from "@/lib/recommend/types";
+import { GLASS_CARD } from "@/components/glassCard";
 
 export function SongCard({ song }: { song: SongResult | null }) {
   if (!song) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-4 text-sm text-[#f4f1ff]/50">
+      <div className={`${GLASS_CARD} px-5 py-4 text-sm text-[#f4f1ff]/50`}>
         지금은 어울리는 찬양을 찾지 못했어요.
       </div>
     );
@@ -15,7 +16,7 @@ export function SongCard({ song }: { song: SongResult | null }) {
     `https://www.youtube.com/results?search_query=${encodeURIComponent(`${song.title} ${song.artist}`)}`;
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-4">
+    <div className={`${GLASS_CARD} flex items-center justify-between gap-3 px-5 py-4`}>
       <div>
         <p className="text-sm font-medium text-[#f4f1ff]">{song.title}</p>
         <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
