@@ -6,7 +6,7 @@ import { SongCard } from "@/components/church/SongCard";
 import { PrayerTopicCard } from "./PrayerTopicCard";
 import type { RecommendResult } from "@/lib/recommend/types";
 import { buildShareText } from "@/lib/share/buildShareText";
-import { GLASS_CARD } from "@/components/glassCard";
+import { SpeechBubble } from "@/components/SpeechBubble";
 
 type PrayerStatus = "idle" | "loading" | "done" | "error";
 
@@ -73,11 +73,7 @@ export function BackyardResult({
   return (
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
-        {encouragement && (
-          <p className={`${GLASS_CARD} whitespace-pre-line px-5 py-4 text-sm leading-relaxed text-[#f4f1ff]/90`}>
-            {encouragement}
-          </p>
-        )}
+        {encouragement && <SpeechBubble className="whitespace-pre-line">{encouragement}</SpeechBubble>}
         <VerseCard verse={verse} />
         <SongCard song={song} />
         {prayerStatus !== "idle" && (
