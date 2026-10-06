@@ -24,6 +24,7 @@ interface QuestionLogEntry {
  * 막지 않는다 (lib/analysis/analysisLog.ts와 동일한 패턴).
  */
 export async function logQuestion(entry: QuestionLogEntry): Promise<void> {
+  if (process.env.NODE_ENV === "production") return;
   try {
     await mkdir(LOG_DIR, { recursive: true });
     const line = JSON.stringify({ timestamp: new Date().toISOString(), ...entry });

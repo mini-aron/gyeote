@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     // F-03 예외처리: AI 응답 실패·JSON 파싱 실패 시 접속 시간대 기준으로만 폴백.
-    console.error("[api/analyze] AI 분석 실패, 시간대 기반 폴백으로 전환", error);
+    console.error("[api/analyze] AI 분석 실패, 시간대 기반 폴백으로 전환", error instanceof Error ? error.name : "unknown");
     const fallback = toFallbackResult(false);
     await logAnalysis({
       source: "fallback",

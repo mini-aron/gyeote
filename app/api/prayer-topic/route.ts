@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const topics = await generatePrayerTopic(summary.slice(0, MAX_SUMMARY_LENGTH));
     return NextResponse.json({ topics });
   } catch (error) {
-    console.error("[api/prayer-topic] 기도제목 생성 실패", error);
+    console.error("[api/prayer-topic] 기도제목 생성 실패", error instanceof Error ? error.name : "unknown");
     return NextResponse.json({ error: "prayer_topic_failed" }, { status: 500 });
   }
 }

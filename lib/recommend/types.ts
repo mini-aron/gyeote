@@ -3,6 +3,8 @@ export interface VerseResult {
   reference: string;
   body: string;
   translation: string;
+  meaning: string | null;
+  application: string | null;
 }
 
 export interface SongResult {
@@ -27,4 +29,6 @@ export interface RecommendResult {
   // F-07 결과 글 — 곡만 다시 뽑는 재시도 호출(include.verse === false)에서는
   // 생성하지 않는다. 그 경우 undefined이고, 클라이언트는 기존 값을 유지한다.
   resultLine?: string;
+  counselRecordId?: string | null;
+  rerollStatus?: "ok" | "no_song" | "not_saved" | "limit";
 }

@@ -19,6 +19,7 @@ interface AnalysisLogEntry {
  * 대상이고, 쓰기 실패해도 분석 응답 자체를 막지 않는다.
  */
 export async function logAnalysis(entry: AnalysisLogEntry): Promise<void> {
+  if (process.env.NODE_ENV === "production") return;
   try {
     await mkdir(LOG_DIR, { recursive: true });
     const line = JSON.stringify({ timestamp: new Date().toISOString(), ...entry });

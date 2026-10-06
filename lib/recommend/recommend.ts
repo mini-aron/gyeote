@@ -21,6 +21,8 @@ interface TaggedVerse {
   reference: string;
   body: string;
   translation: string;
+  meaning: string | null;
+  application: string | null;
   themes: string[];
   situations: string[];
 }
@@ -45,6 +47,8 @@ interface RawVerseRow {
   reference: string;
   body: string;
   translation: string;
+  meaning: string | null;
+  application: string | null;
   verse_themes: { themes: RawTagLink | null }[] | null;
   verse_situations: { situations: RawTagLink | null }[] | null;
 }
@@ -85,7 +89,7 @@ async function fetchTaggedVerses(supabase: SupabaseClient): Promise<TaggedVerse[
   const { data, error } = await supabase
     .from("verses")
     .select(
-      "id, reference, body, translation, verse_themes(themes(name)), verse_situations(situations(name))",
+      "id, reference, body, translation, meaning, application, verse_themes(themes(name)), verse_situations(situations(name))",
     )
     .eq("is_reviewed", true)
     .eq("is_active", true);
@@ -96,6 +100,8 @@ async function fetchTaggedVerses(supabase: SupabaseClient): Promise<TaggedVerse[
     reference: row.reference,
     body: row.body,
     translation: row.translation,
+    meaning: row.meaning,
+    application: row.application,
     themes: namesOf(row.verse_themes, "themes"),
     situations: namesOf(row.verse_situations, "situations"),
   }));
@@ -204,6 +210,8 @@ export async function recommend({
           reference: picked.reference,
           body: picked.body,
           translation: picked.translation,
+          meaning: picked.meaning,
+          application: picked.application,
         }
       : null;
   }

@@ -6,12 +6,16 @@ import { CrisisNotice } from "@/components/CrisisNotice";
 import { LoadingDots } from "@/components/LoadingDots";
 import { BackyardInput } from "@/components/backyard/BackyardInput";
 import { BackyardResult } from "@/components/backyard/BackyardResult";
+import { useBottomNavHidden } from "@/components/nav/BottomNavContext";
+import { useResumeResult } from "@/lib/bookmarks/useResumeResult";
 import { useWorld } from "@/lib/world/WorldContext";
 import { saveDraft } from "@/lib/backyard/draft";
 import { combineWithChurchContext, takeChurchContext } from "@/lib/backyard/churchContext";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
 import type { AnalysisResult } from "@/lib/analysis/types";
+import { createClientRequestId } from "@/lib/counsel/clientRequestId";
+import type { ChurchTurn, CounselTranscript } from "@/lib/counsel/transcript";
 
 type Phase = "input" | "loading" | "result" | "crisis" | "error";
 
@@ -26,7 +30,22 @@ export default function BackyardPage() {
   const [encouragement, setEncouragement] = useState("");
   const [songRetries, setSongRetries] = useState(0);
   const [churchTranscript, setChurchTranscript] = useState("");
+  const [churchTurns, setChurchTurns] = useState<ChurchTurn[]>([]);
+  const [transcriptPayload, setTranscriptPayload] = useState<CounselTranscript | null>(null);
+  const [counselRecordId, setCounselRecordId] = useState<string | null>(null);
+  const clientRequestId = useRef<string | undefined>(undefined);
   const hasTakenChurchContext = useRef(false);
+  useBottomNavHidden(phase === "input");
+
+  useResumeResult("backyard", {
+    onStart: () => setPhase("loading"),
+    onRestore: (pending) => {
+      setResult({ verse: pending.verse, song: pending.song });
+      setEncouragement(pending.resultLine);
+      setSongRetries(MAX_SONG_RETRIES);
+      setPhase("result");
+    },
+  });
 
   useEffect(() => {
     flyTo("backyard");
@@ -36,18 +55,24 @@ export default function BackyardPage() {
     // takeChurchContext는 읽으면서 지우므로 Strict Mode 두 번째 실행이 빈 값으로 덮어쓰지 않게 막는다.
     if (hasTakenChurchContext.current) return;
     hasTakenChurchContext.current = true;
-    setChurchTranscript(takeChurchContext());
+    const context = takeChurchContext();
+    setChurchTranscript(context.transcript);
+    setChurchTurns(context.turns);
+    clientRequestId.current = context.clientRequestId ?? undefined;
   }, []);
 
   const fetchRecommendation = useCallback(
     async (
       tagsToUse: AnalysisResult,
       fullText: string,
+      payload: CounselTranscript | null,
+      recordId: string | null,
       include?: { verse?: boolean; song?: boolean },
     ): Promise<boolean> => {
       setPhase("loading");
       try {
         const history = getRecommendationHistory();
+        clientRequestId.current ??= createClientRequestId();
         const response = await fetch("/api/recommend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -57,6 +82,9 @@ export default function BackyardPage() {
             include,
             mode: "backyard",
             text: include?.verse === false ? undefined : fullText,
+            transcript: include?.verse === false ? undefined : (payload ?? undefined),
+            clientRequestId: clientRequestId.current,
+            counselRecordId: recordId ?? undefined,
           }),
         });
         if (!response.ok) throw new Error("recommend_failed");
@@ -64,8 +92,14 @@ export default function BackyardPage() {
         const data = (await response.json()) as RecommendResult;
         setResult((prev) => ({
           verse: include?.verse === false ? (prev?.verse ?? null) : data.verse,
-          song: include?.song === false ? (prev?.song ?? null) : data.song,
+          song:
+            include?.song === false
+              ? (prev?.song ?? null)
+              : include?.verse === false
+                ? (data.song ?? prev?.song ?? null)
+                : data.song,
         }));
+        if (include?.verse !== false) setCounselRecordId(data.counselRecordId ?? null);
         recordRecommendation({
           songId: include?.song === false ? null : (data.song?.id ?? null),
           verseId: include?.verse === false ? null : (data.verse?.id ?? null),
@@ -75,7 +109,7 @@ export default function BackyardPage() {
         setPhase("result");
         return true;
       } catch {
-        setPhase("error");
+        setPhase(include?.verse === false ? "result" : "error");
         return false;
       }
     },
@@ -86,6 +120,10 @@ export default function BackyardPage() {
     async (writtenText: string) => {
       const fullText = combineWithChurchContext(churchTranscript, writtenText);
       setText(fullText);
+      const payload: CounselTranscript = { version: 1 };
+      if (churchTurns.length > 0) payload.church = churchTurns;
+      if (writtenText) payload.backyard = { text: writtenText };
+      setTranscriptPayload(payload);
       setPhase("loading");
       try {
         const response = await fetch("/api/analyze", {
@@ -101,21 +139,21 @@ export default function BackyardPage() {
           return;
         }
         setTags(analyzed);
-        if (!(await fetchRecommendation(analyzed, fullText))) saveDraft(writtenText);
+        if (!(await fetchRecommendation(analyzed, fullText, payload, null))) saveDraft(writtenText);
       } catch {
         // BackyardInput이 제출 시 임시 저장을 지우므로, 실패하면 다시 저장해 글을 잃지 않게 한다.
         saveDraft(writtenText);
         setPhase("error");
       }
     },
-    [churchTranscript, fetchRecommendation],
+    [churchTranscript, churchTurns, fetchRecommendation],
   );
 
   const handleRetrySong = useCallback(() => {
     if (!tags || songRetries >= MAX_SONG_RETRIES) return;
     setSongRetries((count) => count + 1);
-    void fetchRecommendation(tags, text, { verse: false, song: true });
-  }, [fetchRecommendation, songRetries, tags, text]);
+    void fetchRecommendation(tags, text, transcriptPayload, counselRecordId, { verse: false, song: true });
+  }, [counselRecordId, fetchRecommendation, songRetries, tags, text, transcriptPayload]);
 
   const resetResult = useCallback(() => {
     setPhase("input");
@@ -124,11 +162,15 @@ export default function BackyardPage() {
     setResult(null);
     setEncouragement("");
     setSongRetries(0);
+    setTranscriptPayload(null);
+    setCounselRecordId(null);
+    clientRequestId.current = undefined;
   }, []);
 
   const handleRestart = useCallback(() => {
     resetResult();
     setChurchTranscript("");
+    setChurchTurns([]);
   }, [resetResult]);
 
   return (
