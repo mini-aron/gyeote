@@ -6,17 +6,16 @@ import { GLASS_CARD } from "@/components/glassCard";
 import { useWorld } from "@/lib/world/WorldContext";
 import { formatKoreanDate } from "@/lib/calendar/dateUtils";
 import type { DayCounselRecord, DayEvent } from "@/lib/calendar/types";
-import { CounselRecordCard } from "@/components/calendar/CounselRecordCard";
+import { CounselRecordRow } from "@/components/calendar/CounselRecordRow";
 import { EventSection } from "@/components/calendar/EventSection";
 
 interface DayDetailViewProps {
   date: string;
   records: DayCounselRecord[];
   events: DayEvent[];
-  bookmarkedIds: string[];
 }
 
-export function DayDetailView({ date, records, events, bookmarkedIds }: DayDetailViewProps) {
+export function DayDetailView({ date, records, events }: DayDetailViewProps) {
   const { flyTo } = useWorld();
 
   useEffect(() => {
@@ -37,16 +36,14 @@ export function DayDetailView({ date, records, events, bookmarkedIds }: DayDetai
           <h1 className="font-serif-kr text-xl font-semibold">{formatKoreanDate(date)}</h1>
         </div>
 
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-3">
           <h2 className="text-sm text-[#f4f1ff]/65">상담 기록</h2>
           {records.length === 0 ? (
             <p className={`${GLASS_CARD} px-5 py-6 text-center text-sm text-[#f4f1ff]/60`}>
               이날은 남긴 상담 기록이 없어요.
             </p>
           ) : (
-            records.map((record) => (
-              <CounselRecordCard key={record.id} record={record} bookmarkedIds={bookmarkedIds} />
-            ))
+            records.map((record) => <CounselRecordRow key={record.id} date={date} record={record} />)
           )}
         </section>
 

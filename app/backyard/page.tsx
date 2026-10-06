@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackToStartLink } from "@/components/BackToStartLink";
 import { CrisisNotice } from "@/components/CrisisNotice";
-import { LoadingDots } from "@/components/LoadingDots";
+import { SnakeAppleLoader } from "@/components/SnakeAppleLoader";
 import { BackyardInput } from "@/components/backyard/BackyardInput";
 import { BackyardResult } from "@/components/backyard/BackyardResult";
 import { useBottomNavHidden } from "@/components/nav/BottomNavContext";
@@ -181,10 +181,10 @@ export default function BackyardPage() {
 
       {phase === "loading" && (
         <div className="pointer-events-none flex flex-1 flex-col items-center justify-center gap-3">
+          <SnakeAppleLoader />
           <p className="pointer-events-auto text-sm text-[#f4f1ff]/60">
             천천히 읽고 있어요…
           </p>
-          <LoadingDots className="text-[#f4f1ff]/60" />
         </div>
       )}
 

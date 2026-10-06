@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { GLASS_CARD } from "@/components/glassCard";
+import { VerseCard } from "@/components/church/VerseCard";
 import { useWorld } from "@/lib/world/WorldContext";
 import { removeSongBookmark, removeVerseBookmark } from "@/lib/bookmarks/actions";
 import type { BookmarkedSong, BookmarkedVerse } from "@/lib/bookmarks/types";
@@ -78,21 +79,21 @@ export function BookmarksView({ tab, verses, songs }: BookmarksViewProps) {
         )}
 
         {tab === "verse" &&
-          visibleVerses.map((verse) => (
-            <article key={verse.id} className={`${GLASS_CARD} px-5 py-4 ${verse.isActive ? "" : "opacity-60"}`}>
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-xs tracking-wide text-[#f4f1ff]/65">
-                  {verse.reference} · {verse.translation}
-                </p>
-                <RemoveButton onClick={() => handleRemove(verse.id)} />
-              </div>
-              {verse.isActive ? (
-                <p className="mt-2 line-clamp-3 whitespace-pre-line text-[15px] leading-7">{verse.body}</p>
-              ) : (
+          visibleVerses.map((verse) =>
+            verse.isActive ? (
+              <VerseCard key={verse.id} verse={verse} bookmarked collapsed />
+            ) : (
+              <article key={verse.id} className={`${GLASS_CARD} px-5 py-4 opacity-60`}>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-xs tracking-wide text-[#f4f1ff]/65">
+                    {verse.reference} · {verse.translation}
+                  </p>
+                  <RemoveButton onClick={() => handleRemove(verse.id)} />
+                </div>
                 <p className="mt-2 text-sm text-[#f4f1ff]/60">더 이상 제공되지 않아요</p>
-              )}
-            </article>
-          ))}
+              </article>
+            ),
+          )}
 
         {tab === "song" &&
           visibleSongs.map((song) => (

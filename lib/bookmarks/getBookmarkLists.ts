@@ -8,13 +8,23 @@ export async function getBookmarkedVerses(): Promise<BookmarkedVerse[]> {
   if (!ids?.length) return [];
   const { data } = await supabaseAdmin
     .from("verses")
-    .select("id, reference, body, translation, is_active")
+    .select("id, reference, body, translation, meaning, application, is_active")
     .in("id", ids);
   const byId = new Map((data ?? []).map((row) => [row.id as string, row]));
   return ids.flatMap((id) => {
     const row = byId.get(id);
     return row
-      ? [{ id, reference: row.reference, body: row.body, translation: row.translation, isActive: row.is_active }]
+      ? [
+          {
+            id,
+            reference: row.reference,
+            body: row.body,
+            translation: row.translation,
+            meaning: row.meaning,
+            application: row.application,
+            isActive: row.is_active,
+          },
+        ]
       : [];
   });
 }
