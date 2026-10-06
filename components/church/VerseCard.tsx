@@ -11,10 +11,12 @@ const COLLAPSED_BODY_HEIGHT_PX = 112;
 export function VerseCard({
   verse,
   bookmarked,
+  collapsed = false,
   onBeforeLogin,
 }: {
   verse: VerseResult | null;
   bookmarked?: boolean;
+  collapsed?: boolean;
   onBeforeLogin?: () => void;
 }) {
   if (!verse) {
@@ -38,10 +40,10 @@ export function VerseCard({
           onBeforeLogin={onBeforeLogin}
         />
       </div>
-      <VerseBody key={verse.id} reference={verse.reference} body={verse.body} />
+      <VerseBody key={verse.id} reference={verse.reference} body={verse.body} collapsed={collapsed} />
       {(verse.meaning || verse.application) && (
         <div className="mt-3 divide-y divide-white/10 border-t border-white/10">
-          {verse.meaning && <VerseNote label="말씀의 뜻" text={verse.meaning} defaultOpen />}
+          {verse.meaning && <VerseNote label="말씀의 뜻" text={verse.meaning} defaultOpen={!collapsed} />}
           {verse.application && <VerseNote label="말씀을 내 삶에 적용" text={verse.application} />}
         </div>
       )}
@@ -57,9 +59,9 @@ function verseLines(reference: string, body: string): { number: number | null; t
   return lines.map((text, index) => ({ number: start + index, text }));
 }
 
-function VerseBody({ reference, body }: { reference: string; body: string }) {
+function VerseBody({ reference, body, collapsed }: { reference: string; body: string; collapsed: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(!collapsed);
   const [overflows, setOverflows] = useState(false);
 
   // 접기 버튼이 필요한지(본문이 접힌 높이보다 긴지)는 렌더된 뒤에야 알 수 있어서 layout effect에서 잰다.
