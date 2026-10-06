@@ -2,7 +2,7 @@ import type { ChurchTurn } from "@/lib/counsel/transcript";
 import type { SongResult, VerseResult } from "@/lib/recommend/types";
 
 export interface MonthMarkers {
-  counselDates: string[];
+  counselCounts: Record<string, number>;
   eventDates: string[];
 }
 

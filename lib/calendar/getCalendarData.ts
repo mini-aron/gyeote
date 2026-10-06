@@ -17,8 +17,13 @@ export async function getMonthMarkers(user: User, year: number, month: number): 
     supabase.from("calendar_events").select("event_date").eq("user_id", user.id).gte("event_date", from).lte("event_date", to),
   ]);
   if (counsel.error || events.error) throw new Error("calendar_markers_failed");
+  const counselCounts: Record<string, number> = {};
+  for (const row of counsel.data ?? []) {
+    const date = row.local_date as string;
+    counselCounts[date] = (counselCounts[date] ?? 0) + 1;
+  }
   return {
-    counselDates: [...new Set((counsel.data ?? []).map((row) => row.local_date as string))],
+    counselCounts,
     eventDates: [...new Set((events.data ?? []).map((row) => row.event_date as string))],
   };
 }
