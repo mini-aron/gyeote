@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { LoadingDots } from "@/components/LoadingDots";
+import { SpeechBubble } from "@/components/SpeechBubble";
 import { getTimeBand } from "@/lib/greeting";
 import { FIRST_QUESTIONS, FOLLOW_UP_QUESTION } from "@/lib/church/fallbackQuestions";
 import { MIN_TURNS, type GeneratedQuestion } from "@/lib/church/types";
@@ -115,11 +116,9 @@ export function ChurchChat({
             <ChatBubble key={index} from={message.from} text={message.text} />
           ))}
           {isQuestionLoading && (
-            <div className="flex justify-start">
-              <div className="rounded-2xl bg-white/[0.08] px-4 py-3 text-[#f4f1ff]">
-                <LoadingDots />
-              </div>
-            </div>
+            <SpeechBubble>
+              <LoadingDots />
+            </SpeechBubble>
           )}
         </div>
 
@@ -208,16 +207,10 @@ export function ChurchChat({
 }
 
 function ChatBubble({ from, text }: { from: ChatMessage["from"]; text: string }) {
-  const isApp = from === "app";
+  if (from === "app") return <SpeechBubble>{text}</SpeechBubble>;
   return (
-    <div className={`flex ${isApp ? "justify-start" : "justify-end"}`}>
-      <p
-        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
-          isApp ? "bg-white/[0.08] text-[#f4f1ff]" : "bg-[#ffd9a8]/15 text-[#ffd9a8]"
-        }`}
-      >
-        {text}
-      </p>
+    <div className="flex justify-end">
+      <p className="max-w-[80%] rounded-2xl bg-[#ffd9a8]/15 px-4 py-2 text-sm leading-relaxed text-[#ffd9a8]">{text}</p>
     </div>
   );
 }
