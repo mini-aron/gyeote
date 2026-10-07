@@ -1,5 +1,5 @@
 import "server-only";
-import { callOllamaChat, type ChatMessage } from "@/shared/lib/ollama-client";
+import { callAiChat, type ChatMessage } from "@/shared/lib/ai-client";
 import { situationHintFromTime } from "@/lib/analysis/situationHint";
 import { MIN_TURNS, MAX_TURNS, type GeneratedQuestion } from "./types";
 
@@ -158,7 +158,7 @@ function parseQuestionResult(raw: string): Omit<GeneratedQuestion, "isFinal"> & 
 }
 
 async function generateOnce(messages: ChatMessage[]) {
-  const raw = await callOllamaChat(messages);
+  const raw = await callAiChat(messages);
   return parseQuestionResult(raw);
 }
 
