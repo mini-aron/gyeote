@@ -8,8 +8,8 @@ import { useSessionStatus } from "@/components/auth/useSessionStatus";
 import { useBottomNav } from "@/components/nav/BottomNavContext";
 
 const KEYBOARD_SHRINK_RATIO = 0.75;
-const LABEL_SHADOW = "[text-shadow:0_1px_6px_rgba(10,8,22,0.9)]";
-const ICON_SHADOW = "drop-shadow-[0_1px_4px_rgba(10,8,22,0.9)]";
+const LABEL_SHADOW = "[text-shadow:0_1px_4px_rgba(10,8,22,0.6)]";
+const ICON_SHADOW = "drop-shadow-[0_1px_3px_rgba(10,8,22,0.6)]";
 
 interface NavItem {
   href: string;
@@ -18,8 +18,8 @@ interface NavItem {
 }
 
 const ICON_PROPS = {
-  width: 24,
-  height: 24,
+  width: 20,
+  height: 20,
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
@@ -121,22 +121,22 @@ export function BottomNav() {
   return (
     <nav
       aria-label="주요 메뉴"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 pb-[env(safe-area-inset-bottom,0px)]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-[max(12px,env(safe-area-inset-bottom,0px))]"
     >
-      <ul className="mx-auto flex max-w-md items-stretch justify-around px-2 pb-1 pt-2">
+      <ul className="pointer-events-auto mx-auto flex max-w-xs items-stretch justify-between rounded-[26px] border border-white/25 bg-white/15 p-1 shadow-[0_8px_28px_rgba(10,8,22,0.45)] backdrop-blur-xl">
         {NAV_ITEMS.map((item) => {
           const isHome = item.href === "/";
           const current = isHome ? pathname === "/" : pathname.startsWith(item.href);
           const locked = status === "guest" && !isHome;
-          const tone = current ? "text-[#f4f1ff]" : "text-[#f4f1ff]/60";
-          const className = `pointer-events-auto relative flex min-w-14 flex-col items-center gap-0.5 px-2 py-1 transition-colors hover:text-[#f4f1ff] ${tone}`;
+          const tone = current ? "bg-white/20 text-[#f4f1ff]" : "text-[#f4f1ff]/70";
+          const className = `relative flex min-w-12 flex-col items-center gap-0.5 rounded-[22px] px-2 py-1 transition-colors hover:text-[#f4f1ff] ${tone}`;
           const content = (
             <>
               <span className={`relative ${ICON_SHADOW}`}>
                 {item.icon}
                 {locked && <LockBadge />}
               </span>
-              <span className={`text-[11px] ${current ? "font-medium" : ""} ${LABEL_SHADOW}`}>
+              <span className={`text-[10px] ${current ? "font-medium" : ""} ${LABEL_SHADOW}`}>
                 {item.label}
               </span>
             </>
