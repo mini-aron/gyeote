@@ -8,6 +8,7 @@ import { buildShareText } from "@/lib/share/buildShareText";
 import { savePendingResult } from "@/lib/bookmarks/pendingResult";
 import { useBookmarkStatus } from "@/components/bookmarks/useBookmarkStatus";
 import { SpeechBubble } from "@/components/SpeechBubble";
+import { InstallBanner } from "@/components/pwa/InstallBanner";
 
 interface ChurchResultProps {
   resultLine: string;
@@ -70,6 +71,7 @@ export function ChurchResult({
           <ActionButton onClick={handleShare}>공유하기</ActionButton>
           <ActionButton onClick={onRestart} disabled={songLoading}>처음부터</ActionButton>
         </div>
+        <InstallBanner />
       </div>
     </div>
   );

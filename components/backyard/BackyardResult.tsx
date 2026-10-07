@@ -10,6 +10,7 @@ import { savePendingResult } from "@/lib/bookmarks/pendingResult";
 import { useBookmarkStatus } from "@/components/bookmarks/useBookmarkStatus";
 import { REQUEST_TIMEOUT_MS, requestJson } from "@/shared/lib/requestJson";
 import { SpeechBubble } from "@/components/SpeechBubble";
+import { InstallBanner } from "@/components/pwa/InstallBanner";
 
 type PrayerStatus = "idle" | "loading" | "done" | "error";
 
@@ -98,6 +99,7 @@ export function BackyardResult({
           <ActionButton onClick={handleShare}>공유하기</ActionButton>
           <ActionButton onClick={onRestart} disabled={songLoading}>처음부터</ActionButton>
         </div>
+        <InstallBanner />
       </div>
     </div>
   );
