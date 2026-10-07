@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1d2350" />
+    <title>곁에 · 연결을 기다리는 중</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        box-sizing: border-box;
+        background: linear-gradient(to bottom, #1d2350, #0d0b1a 70%);
+        color: #f4f1ff;
+        font-family: "Gowun Batang", "Noto Serif KR", serif;
+        text-align: center;
+      }
+      main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        max-width: 320px;
+      }
+      .window {
+        width: 44px;
+        height: 62px;
+        background: #ffc27a;
+        border-radius: 22px 22px 0 0;
+        box-shadow: 0 0 48px rgba(255, 194, 122, 0.45);
+      }
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+      }
+      p {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.7;
+        color: rgba(244, 241, 255, 0.75);
+      }
+      button {
+        margin-top: 4px;
+        padding: 10px 22px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f4f1ff;
+        font: inherit;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="window" aria-hidden="true"></div>
+      <h1>지금은 연결이 끊겨 있어요</h1>
+      <p>인터넷이 다시 연결되면<br />그때 다시 이야기 나눠요.</p>
+      <button type="button" onclick="location.reload()">다시 시도</button>
+    </main>
+  </body>
+</html>

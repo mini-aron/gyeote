@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { WorldProvider } from "@/lib/world/WorldContext";
 import { LazyWorldBackground } from "@/components/world/LazyWorldBackground";
 import { LoginSheetProvider } from "@/components/auth/LoginSheetContext";
 import { LoginSheet } from "@/components/auth/LoginSheet";
 import { BottomNavProvider } from "@/components/nav/BottomNavContext";
 import { BottomNav } from "@/components/nav/BottomNav";
+import { PwaSetup } from "@/components/pwa/PwaSetup";
 // next/font/google는 빌드 중 Google Fonts를 직접 fetch하는데, Turbopack의
 // 폰트 리졸버가 이 과정에서 가끔 "Can't resolve
 // '@vercel/turbopack-next/internal/font/google/font'" 에러를 내며 Vercel
@@ -21,6 +22,12 @@ export const metadata: Metadata = {
   title: "곁에 · gyeote",
   description:
     "짧게 대화하면, 지금 마음에 꼭 맞는 말씀 한 구절과 찬양 한 곡을 골라주는 웹서비스",
+  appleWebApp: { capable: true, title: "곁에", statusBarStyle: "black-translucent" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1d2350",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -41,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </div>
               <BottomNav />
               <LoginSheet />
+              <PwaSetup />
             </BottomNavProvider>
           </LoginSheetProvider>
         </WorldProvider>
