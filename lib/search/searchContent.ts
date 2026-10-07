@@ -64,7 +64,7 @@ async function fetchByIds<T extends { id: string }>(
   return new Map(results.flat().map((row) => [row.id, row]));
 }
 
-export async function searchVerses(filters: SearchFilters): Promise<SearchPage<VerseResult>> {
+export async function searchVerses(filters: SearchFilters, offset = 0): Promise<SearchPage<VerseResult>> {
   const [bookIds, tagIds] = await Promise.all([resolveBookIds(filters), idsMatchingTags("verse", filters)]);
   if (bookIds && bookIds.length === 0) return { items: [], total: 0 };
 
@@ -76,7 +76,7 @@ export async function searchVerses(filters: SearchFilters): Promise<SearchPage<V
   });
 
   const matched = candidates.map((row) => row.id).filter((id) => !tagIds || tagIds.has(id));
-  const pageIds = matched.slice(0, filters.limit);
+  const pageIds = matched.slice(offset, offset + filters.limit);
   const rows = await fetchByIds<VerseResult>(
     "verses",
     "id, reference, body, translation, meaning, application",
@@ -91,7 +91,7 @@ function sanitizeKeyword(keyword: string): string {
   return keyword.replace(/[%_*\\,()"]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-export async function searchSongs(filters: SearchFilters): Promise<SearchPage<SongResult>> {
+export async function searchSongs(filters: SearchFilters, offset = 0): Promise<SearchPage<SongResult>> {
   const keyword = sanitizeKeyword(filters.q);
 
   const [tagIds, candidates] = await Promise.all([
@@ -104,7 +104,7 @@ export async function searchSongs(filters: SearchFilters): Promise<SearchPage<So
   ]);
 
   const matched = candidates.map((row) => row.id).filter((id) => !tagIds || tagIds.has(id));
-  const pageIds = matched.slice(0, filters.limit);
+  const pageIds = matched.slice(offset, offset + filters.limit);
   const rows = await fetchByIds<{
     id: string;
     title: string;

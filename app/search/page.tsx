@@ -1,5 +1,5 @@
 import { requireMember } from "@/lib/auth/requireMember";
-import { parseSearchFilters } from "@/lib/search/searchQuery";
+import { buildSearchHref, parseSearchFilters } from "@/lib/search/searchQuery";
 import { getSearchOptions } from "@/lib/search/getSearchOptions";
 import { searchSongs, searchVerses } from "@/lib/search/searchContent";
 import { readBookmarkedIds } from "@/lib/bookmarks/bookmarkStore";
@@ -23,10 +23,11 @@ export default async function Page({
   return (
     <SearchView filters={filters} options={options}>
       <SearchResults
+        key={buildSearchHref(filters)}
         filters={filters}
         verses={verses}
         songs={songs}
-        bookmarkedIds={new Set(bookmarkedIds ?? [])}
+        bookmarkedIds={bookmarkedIds ?? []}
       />
     </SearchView>
   );
