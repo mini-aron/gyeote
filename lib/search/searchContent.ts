@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/shared/lib/supabase-client";
+import { getBibleBooks } from "@/lib/catalog/catalogCache";
 import { fetchAllRows } from "@/lib/search/fetchAllRows";
 import type { SearchFilters } from "@/lib/search/searchQuery";
 import type { SongResult, VerseResult } from "@/lib/recommend/types";
@@ -18,14 +19,16 @@ async function idsMatchingTags(kind: "verse" | "song", filters: SearchFilters): 
   ];
   if (kind === "song") groups.push({ table: "song_moods", column: "mood_id", ids: filters.mood });
 
-  const matchedSets: Set<string>[] = [];
-  for (const group of groups) {
-    if (group.ids.length === 0) continue;
-    const rows = await fetchAllRows<Record<string, string>>((from, to) =>
-      supabaseAdmin.from(group.table).select(`${kind}_id`).in(group.column, group.ids).order(`${kind}_id`).order(group.column).range(from, to),
-    );
-    matchedSets.push(new Set(rows.map((row) => row[`${kind}_id`])));
-  }
+  const matchedSets = await Promise.all(
+    groups
+      .filter((group) => group.ids.length > 0)
+      .map(async (group) => {
+        const rows = await fetchAllRows<Record<string, string>>((from, to) =>
+          supabaseAdmin.from(group.table).select(`${kind}_id`).in(group.column, group.ids).order(`${kind}_id`).order(group.column).range(from, to),
+        );
+        return new Set(rows.map((row) => row[`${kind}_id`]));
+      }),
+  );
   if (matchedSets.length === 0) return null;
   const [first, ...rest] = matchedSets;
   return new Set([...first].filter((id) => rest.every((set) => set.has(id))));
@@ -33,13 +36,15 @@ async function idsMatchingTags(kind: "verse" | "song", filters: SearchFilters): 
 
 async function resolveBookIds(filters: SearchFilters): Promise<number[] | null> {
   if (!filters.testament && !filters.book) return null;
-  let query = supabaseAdmin.from("bible_books").select("id");
-  if (filters.testament) query = query.eq("testament", filters.testament);
-  if (filters.category) query = query.eq("category", filters.category);
-  if (filters.book) query = query.eq("id", filters.book);
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []).map((row) => row.id as number);
+  const books = await getBibleBooks();
+  return books
+    .filter(
+      (book) =>
+        (!filters.testament || book.testament === filters.testament) &&
+        (!filters.category || book.category === filters.category) &&
+        (!filters.book || book.id === filters.book),
+    )
+    .map((book) => book.id);
 }
 
 async function fetchByIds<T extends { id: string }>(
@@ -87,14 +92,16 @@ function sanitizeKeyword(keyword: string): string {
 }
 
 export async function searchSongs(filters: SearchFilters): Promise<SearchPage<SongResult>> {
-  const tagIds = await idsMatchingTags("song", filters);
   const keyword = sanitizeKeyword(filters.q);
 
-  const candidates = await fetchAllRows<{ id: string }>((from, to) => {
-    let query = supabaseAdmin.from("songs").select("id").eq("is_reviewed", true).eq("is_active", true);
-    if (keyword) query = query.or(`title.ilike."%${keyword}%",artist.ilike."%${keyword}%"`);
-    return query.order("title").order("id").range(from, to);
-  });
+  const [tagIds, candidates] = await Promise.all([
+    idsMatchingTags("song", filters),
+    fetchAllRows<{ id: string }>((from, to) => {
+      let query = supabaseAdmin.from("songs").select("id").eq("is_reviewed", true).eq("is_active", true);
+      if (keyword) query = query.or(`title.ilike."%${keyword}%",artist.ilike."%${keyword}%"`);
+      return query.order("title").order("id").range(from, to);
+    }),
+  ]);
 
   const matched = candidates.map((row) => row.id).filter((id) => !tagIds || tagIds.has(id));
   const pageIds = matched.slice(0, filters.limit);
