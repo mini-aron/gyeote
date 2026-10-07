@@ -3,6 +3,7 @@
 import { getCurrentUser } from "@/shared/lib/auth";
 import { hasRequiredConsents } from "@/lib/auth/consentStatus";
 import { MAX_LIMIT, PAGE_SIZE, parseSearchFilters } from "@/lib/search/searchQuery";
+import { readBookmarkedIds } from "@/lib/bookmarks/bookmarkStore";
 import { searchSongs, searchVerses, type SearchPage } from "@/lib/search/searchContent";
 import type { SongResult, VerseResult } from "@/lib/recommend/types";
 
@@ -26,9 +27,10 @@ export async function loadMoreSearch(query: unknown, offset: unknown): Promise<L
   const filters = { ...parseSearchFilters(raw), limit: Math.min(PAGE_SIZE, MAX_LIMIT - offset) };
 
   try {
+    const bookmarkedIds = filters.bookmarked ? ((await readBookmarkedIds(filters.type)) ?? []) : [];
     const [verses, songs] = await Promise.all([
-      filters.type === "verse" ? searchVerses(filters, offset) : null,
-      filters.type === "song" ? searchSongs(filters, offset) : null,
+      filters.type === "verse" ? searchVerses(filters, offset, bookmarkedIds) : null,
+      filters.type === "song" ? searchSongs(filters, offset, bookmarkedIds) : null,
     ]);
     return { ok: true, verses, songs };
   } catch {

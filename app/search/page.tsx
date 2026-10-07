@@ -13,11 +13,18 @@ export default async function Page({
 }) {
   await requireMember("search");
   const filters = parseSearchFilters(await searchParams);
-  const [options, verses, songs, bookmarkedIds] = await Promise.all([
+  const bookmarkedPromise = readBookmarkedIds(filters.type);
+  const searchPromise = (async () => {
+    const ids = filters.bookmarked ? ((await bookmarkedPromise) ?? []) : [];
+    return Promise.all([
+      filters.type === "verse" ? searchVerses(filters, 0, ids) : null,
+      filters.type === "song" ? searchSongs(filters, 0, ids) : null,
+    ]);
+  })();
+  const [options, [verses, songs], bookmarkedIds] = await Promise.all([
     getSearchOptions(filters),
-    filters.type === "verse" ? searchVerses(filters) : null,
-    filters.type === "song" ? searchSongs(filters) : null,
-    readBookmarkedIds(filters.type),
+    searchPromise,
+    bookmarkedPromise,
   ]);
 
   return (

@@ -142,10 +142,18 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
 
   const hasFilter =
     draft.theme.length + draft.situation.length + draft.mood.length > 0 ||
-    Boolean(draft.testament || draft.q);
+    Boolean(draft.testament || draft.q || draft.bookmarked);
 
   return (
     <section className={`${GLASS_CARD} flex flex-col gap-4 px-4 py-4 transition-opacity ${pending ? "opacity-70" : ""}`}>
+      <FilterGroup label="북마크">
+        <ChipRow>
+          <Chip selected={draft.bookmarked} onClick={() => go({ bookmarked: !draft.bookmarked })}>
+            북마크한 것만
+          </Chip>
+        </ChipRow>
+      </FilterGroup>
+
       {filters.type === "song" && (
         <form
           key={filters.q}
@@ -259,7 +267,7 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
         <button
           type="button"
           onClick={() => {
-            goNow({ theme: [], situation: [], mood: [], testament: undefined, category: undefined, book: undefined, chapter: undefined, q: "" });
+            goNow({ theme: [], situation: [], mood: [], testament: undefined, category: undefined, book: undefined, chapter: undefined, q: "", bookmarked: false });
           }}
           className="self-start text-xs text-[#c9bcff] underline underline-offset-2"
         >

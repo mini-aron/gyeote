@@ -22,6 +22,11 @@ function appendUnique<T extends { id: string }>(current: T[], next: T[]): T[] {
   return [...current, ...next.filter((item) => !seen.has(item.id))];
 }
 
+function emptyMessage(filters: SearchFilters): string {
+  const noun = filters.type === "verse" ? "말씀" : "찬양";
+  return filters.bookmarked ? `북마크한 ${noun} 중 조건에 맞는 ${noun}이 없어요.` : `조건에 맞는 ${noun}이 없어요.`;
+}
+
 export function SearchResults({
   filters,
   verses,
@@ -57,7 +62,7 @@ export function SearchResults({
   if (count === 0) {
     return (
       <p className={`${GLASS_CARD} px-5 py-8 text-center text-sm text-[#f4f1ff]/60`}>
-        조건에 맞는 {filters.type === "verse" ? "말씀" : "찬양"}이 없어요. 필터를 줄여 보세요.
+        {emptyMessage(filters)} 필터를 줄여 보세요.
       </p>
     );
   }

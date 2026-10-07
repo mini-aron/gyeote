@@ -3,6 +3,7 @@ import { SkeletonBlock } from "@/components/SkeletonBlock";
 
 const SKELETON_CARD_COUNT = 3;
 const SKELETON_FILTER_GROUPS = [
+  { label: "북마크", chipWidths: ["w-24"] },
   { label: "성경 분류", chipWidths: ["w-14", "w-14"] },
   { label: "주제", chipWidths: ["w-14", "w-16", "w-12", "w-16", "w-14"] },
   { label: "상황", chipWidths: ["w-16", "w-12", "w-14", "w-16"] },

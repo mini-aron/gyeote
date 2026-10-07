@@ -64,7 +64,13 @@ async function fetchByIds<T extends { id: string }>(
   return new Map(results.flat().map((row) => [row.id, row]));
 }
 
-export async function searchVerses(filters: SearchFilters, offset = 0): Promise<SearchPage<VerseResult>> {
+// bookmarkedIds는 회원별 데이터라 호출자가 요청 단위로 넘긴다 (카탈로그 캐시에 섞지 않는다).
+export async function searchVerses(
+  filters: SearchFilters,
+  offset = 0,
+  bookmarkedIds: string[] = [],
+): Promise<SearchPage<VerseResult>> {
+  if (filters.bookmarked && bookmarkedIds.length === 0) return { items: [], total: 0 };
   const [bookIds, tagIds] = await Promise.all([resolveBookIds(filters), idsMatchingTags("verse", filters)]);
   if (bookIds && bookIds.length === 0) return { items: [], total: 0 };
 
@@ -75,7 +81,10 @@ export async function searchVerses(filters: SearchFilters, offset = 0): Promise<
     return query.order("book_id").order("chapter").order("verse_start").order("id").range(from, to);
   });
 
-  const matched = candidates.map((row) => row.id).filter((id) => !tagIds || tagIds.has(id));
+  const bookmarkedSet = filters.bookmarked ? new Set(bookmarkedIds) : null;
+  const matched = candidates
+    .map((row) => row.id)
+    .filter((id) => (!tagIds || tagIds.has(id)) && (!bookmarkedSet || bookmarkedSet.has(id)));
   const pageIds = matched.slice(offset, offset + filters.limit);
   const rows = await fetchByIds<VerseResult>(
     "verses",
@@ -91,7 +100,12 @@ function sanitizeKeyword(keyword: string): string {
   return keyword.replace(/[%_*\\,()"]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-export async function searchSongs(filters: SearchFilters, offset = 0): Promise<SearchPage<SongResult>> {
+export async function searchSongs(
+  filters: SearchFilters,
+  offset = 0,
+  bookmarkedIds: string[] = [],
+): Promise<SearchPage<SongResult>> {
+  if (filters.bookmarked && bookmarkedIds.length === 0) return { items: [], total: 0 };
   const keyword = sanitizeKeyword(filters.q);
 
   const [tagIds, candidates] = await Promise.all([
@@ -103,7 +117,10 @@ export async function searchSongs(filters: SearchFilters, offset = 0): Promise<S
     }),
   ]);
 
-  const matched = candidates.map((row) => row.id).filter((id) => !tagIds || tagIds.has(id));
+  const bookmarkedSet = filters.bookmarked ? new Set(bookmarkedIds) : null;
+  const matched = candidates
+    .map((row) => row.id)
+    .filter((id) => (!tagIds || tagIds.has(id)) && (!bookmarkedSet || bookmarkedSet.has(id)));
   const pageIds = matched.slice(offset, offset + filters.limit);
   const rows = await fetchByIds<{
     id: string;

@@ -13,6 +13,7 @@ export interface SearchFilters {
   book?: number;
   chapter?: number;
   q: string;
+  bookmarked: boolean;
   limit: number;
 }
 
@@ -54,6 +55,7 @@ export function parseSearchFilters(raw: RawParams): SearchFilters {
     book,
     chapter: book ? int(raw.chapter, 1, 200) : undefined,
     q: isVerse ? "" : (many(raw.q)[0] ?? "").trim().slice(0, MAX_QUERY_LENGTH),
+    bookmarked: many(raw.bookmarked)[0] === "1",
     limit: int(raw.limit, PAGE_SIZE, MAX_LIMIT) ?? PAGE_SIZE,
   };
 }
@@ -69,6 +71,7 @@ export function buildSearchHref(filters: Partial<SearchFilters> & { type: Search
   if (filters.book) params.set("book", String(filters.book));
   if (filters.chapter) params.set("chapter", String(filters.chapter));
   if (filters.q) params.set("q", filters.q);
+  if (filters.bookmarked) params.set("bookmarked", "1");
   if (filters.limit && filters.limit > PAGE_SIZE) params.set("limit", String(filters.limit));
   const query = params.toString();
   return query ? `/search?${query}` : "/search";
