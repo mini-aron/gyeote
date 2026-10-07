@@ -1,4 +1,9 @@
+import type { VerseResult } from "@/lib/recommend/types";
+
 export type BookmarkKind = "verse" | "song";
+
+// null은 조회 중, "unknown"은 조회에 실패해 모르는 상태.
+export type BookmarkState = boolean | null | "unknown";
 
 export type BookmarkErrorCode = "unauthorized" | "consent" | "invalid" | "failed";
 
@@ -12,11 +17,7 @@ export interface BookmarkStatus {
   song: boolean;
 }
 
-export interface BookmarkedVerse {
-  id: string;
-  reference: string;
-  body: string;
-  translation: string;
+export interface BookmarkedVerse extends VerseResult {
   isActive: boolean;
 }
 

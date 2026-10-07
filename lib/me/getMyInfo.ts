@@ -15,19 +15,22 @@ async function selectProfile(userId: string) {
   return data;
 }
 
+async function selectConsentRows(userId: string) {
+  const supabase = await createSupabaseServerClient();
+  return supabase
+    .from("user_consents")
+    .select("consent_type, version, agreed, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+}
+
 export async function getMyInfo(user: User): Promise<MyInfo> {
-  let profile = await selectProfile(user.id);
+  const [firstProfile, { data: rows }] = await Promise.all([selectProfile(user.id), selectConsentRows(user.id)]);
+  let profile = firstProfile;
   if (!profile) {
     await ensureProfile(user);
     profile = await selectProfile(user.id);
   }
-
-  const supabase = await createSupabaseServerClient();
-  const { data: rows } = await supabase
-    .from("user_consents")
-    .select("consent_type, version, agreed, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
 
   const latest = new Map<string, ConsentHistoryEntry>();
   for (const row of rows ?? []) {

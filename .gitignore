@@ -58,3 +58,5 @@ supabase/migrations/*_data.sql
 /.claude/rules
 /.claude/hooks
 /.claude/settings.local.json
+/.claude/agents
+/.claude/skills

@@ -6,6 +6,7 @@ import { SpeechBubble } from "@/components/SpeechBubble";
 import { getTimeBand } from "@/lib/greeting";
 import { FIRST_QUESTIONS, FOLLOW_UP_QUESTION } from "@/lib/church/fallbackQuestions";
 import { MIN_TURNS, type GeneratedQuestion } from "@/lib/church/types";
+import { REQUEST_TIMEOUT_MS, requestJson } from "@/shared/lib/requestJson";
 import { buildChurchTurn, type ChurchTurn } from "@/lib/counsel/transcript";
 
 const FREE_TEXT_MAX_LENGTH = 200;
@@ -32,13 +33,11 @@ function clientFallback(turnNumber: number): GeneratedQuestion {
 }
 
 async function fetchQuestion(turnNumber: number, transcript: string): Promise<GeneratedQuestion> {
-  const response = await fetch("/api/church-question", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ turnNumber, transcript }),
-  });
-  if (!response.ok) throw new Error("question_failed");
-  return (await response.json()) as GeneratedQuestion;
+  return requestJson<GeneratedQuestion>(
+    "/api/church-question",
+    { turnNumber, transcript },
+    { timeoutMs: REQUEST_TIMEOUT_MS.question },
+  );
 }
 
 export function ChurchChat({

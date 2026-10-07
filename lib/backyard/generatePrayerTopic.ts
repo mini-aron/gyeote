@@ -1,5 +1,5 @@
 import "server-only";
-import { callOllamaChat } from "@/shared/lib/ollama-client";
+import { callAiChat } from "@/shared/lib/ai-client";
 import { sanitizeGeneratedText } from "@/lib/church/generateResultLine";
 
 const SYSTEM_PROMPT = `너는 "곁에" 서비스에서 사용자가 털어놓은 내용의 요약을 받아, 사용자가 직접 기도할 때 쓸 수 있는 기도제목으로 정리해주는 AI다.
@@ -36,7 +36,7 @@ function parsePrayerTopics(raw: string): string[] {
 export async function generatePrayerTopic(summary: string): Promise<string[]> {
   const call = async () =>
     parsePrayerTopics(
-      await callOllamaChat([
+      await callAiChat([
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: `요약: ${summary}\n\n이 내용을 기도제목으로 정리해줘.` },
       ]),

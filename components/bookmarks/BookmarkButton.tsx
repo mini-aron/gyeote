@@ -5,17 +5,18 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLoginSheet } from "@/components/auth/LoginSheetContext";
 import { useSessionStatus } from "@/components/auth/useSessionStatus";
 import {
-  getBookmarkStatus,
+  ensureSongBookmark,
+  ensureVerseBookmark,
   toggleSongBookmark,
   toggleVerseBookmark,
 } from "@/lib/bookmarks/actions";
 import { buildResumeParam } from "@/lib/bookmarks/pendingResult";
-import type { BookmarkKind } from "@/lib/bookmarks/types";
+import type { BookmarkKind, BookmarkState } from "@/lib/bookmarks/types";
 
 interface BookmarkButtonProps {
   kind: BookmarkKind;
   id: string;
-  initialBookmarked?: boolean;
+  initialBookmarked: BookmarkState;
   onBeforeLogin?: () => void;
 }
 
@@ -24,21 +25,18 @@ export function BookmarkButton({ kind, id, initialBookmarked, onBeforeLogin }: B
   const { open } = useLoginSheet();
   const pathname = usePathname();
   const router = useRouter();
-  const [bookmarked, setBookmarked] = useState(initialBookmarked ?? false);
+  const [bookmarked, setBookmarked] = useState(initialBookmarked === true);
   const busy = useRef(false);
+  const adopted = useRef(false);
 
   useEffect(() => {
-    // 목록 화면은 서버에서 상태를 한 번에 넘겨준다 — 카드마다 서버 액션을 부르면 요청이 카드 수만큼 순차로 쌓인다.
-    if (status !== "member" || initialBookmarked !== undefined) return;
-    let active = true;
-    const input = kind === "verse" ? { verseId: id } : { songId: id };
-    void getBookmarkStatus(input).then((result) => {
-      if (active && !busy.current) setBookmarked(result[kind]);
-    });
-    return () => {
-      active = false;
-    };
-  }, [status, kind, id, initialBookmarked]);
+    // null(조회 중)과 "unknown"(조회 실패)은 낡은 값을 보여주지 않도록 미저장으로 비워 둔다.
+    if (busy.current) return;
+    adopted.current = false;
+    setBookmarked(initialBookmarked === true);
+  }, [initialBookmarked, id]);
+
+  const loading = initialBookmarked === null && status !== "guest";
 
   const openLogin = () => {
     onBeforeLogin?.();
@@ -53,12 +51,17 @@ export function BookmarkButton({ kind, id, initialBookmarked, onBeforeLogin }: B
       openLogin();
       return;
     }
-    if (busy.current) return;
+    if (busy.current || loading) return;
     busy.current = true;
     const previous = bookmarked;
-    setBookmarked(!previous);
+    // 상태를 모르면 이미 저장된 북마크를 지우지 않도록 저장만 한다.
+    const saveOnly = initialBookmarked === "unknown" && !adopted.current;
+    setBookmarked(saveOnly ? true : !previous);
     try {
-      const result = await (kind === "verse" ? toggleVerseBookmark(id) : toggleSongBookmark(id));
+      const run = saveOnly
+        ? kind === "verse" ? ensureVerseBookmark : ensureSongBookmark
+        : kind === "verse" ? toggleVerseBookmark : toggleSongBookmark;
+      const result = await run(id);
       if (result.error === "unauthorized") {
         setBookmarked(previous);
         openLogin();
@@ -68,6 +71,7 @@ export function BookmarkButton({ kind, id, initialBookmarked, onBeforeLogin }: B
       } else if (result.error) {
         setBookmarked(previous);
       } else {
+        adopted.current = true;
         setBookmarked(result.bookmarked);
       }
     } catch {
@@ -81,9 +85,11 @@ export function BookmarkButton({ kind, id, initialBookmarked, onBeforeLogin }: B
     <button
       type="button"
       onClick={handleClick}
+      disabled={loading}
+      aria-busy={loading}
       aria-pressed={bookmarked}
       aria-label={bookmarked ? "북마크 해제" : "북마크에 저장"}
-      className="-m-2 shrink-0 rounded-full p-2 text-[#c9bcff] transition-colors hover:bg-white/10"
+      className={`-m-2 shrink-0 rounded-full p-2 text-[#c9bcff] transition-colors hover:bg-white/10 ${loading ? "opacity-40" : ""}`}
     >
       <svg
         viewBox="0 0 24 24"
