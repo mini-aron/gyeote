@@ -1,5 +1,5 @@
 import "server-only";
-import { callOllamaChat, type ChatMessage } from "@/shared/lib/ollama-client";
+import { callAiChat, type ChatMessage } from "@/shared/lib/ai-client";
 import type { AnalysisResult } from "@/lib/analysis/types";
 import type { VerseResult, SongResult } from "@/lib/recommend/types";
 
@@ -77,7 +77,7 @@ async function generateOnce(params: GenerateResultLineParams): Promise<string> {
     { role: "user", content: lines.join("\n") },
   ];
 
-  const raw = await callOllamaChat(messages);
+  const raw = await callAiChat(messages);
   const text = sanitizeGeneratedText(raw);
 
   if (!text || text.length > MAX_LENGTH) {

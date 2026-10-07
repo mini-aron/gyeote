@@ -1,5 +1,5 @@
 import "server-only";
-import { callOllamaChat } from "@/shared/lib/ollama-client";
+import { callAiChat } from "@/shared/lib/ai-client";
 import { THEME_OPTIONS, SITUATION_OPTIONS, MOOD_OPTIONS } from "./tagVocabulary";
 import { situationHintFromTime } from "./situationHint";
 import type { AnalysisResult, AnalysisSource } from "./types";
@@ -97,7 +97,7 @@ export async function analyzeText(
 ${TEXT_LABEL[source]}:
 ${transcript}`;
 
-  const raw = await callOllamaChat([
+  const raw = await callAiChat([
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: userContent },
   ]);

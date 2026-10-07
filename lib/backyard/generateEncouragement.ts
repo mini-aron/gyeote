@@ -1,5 +1,5 @@
 import "server-only";
-import { callOllamaChat, type ChatMessage } from "@/shared/lib/ollama-client";
+import { callAiChat, type ChatMessage } from "@/shared/lib/ai-client";
 import { containsVerseQuote, sanitizeGeneratedText } from "@/lib/church/generateResultLine";
 import type { AnalysisResult } from "@/lib/analysis/types";
 import type { VerseResult, SongResult } from "@/lib/recommend/types";
@@ -83,7 +83,7 @@ async function generateOnce(params: GenerateEncouragementParams): Promise<string
     { role: "user", content: lines.join("\n") },
   ];
 
-  const raw = sanitizeGeneratedText(await callOllamaChat(messages)).replace(/\s+/g, " ");
+  const raw = sanitizeGeneratedText(await callAiChat(messages)).replace(/\s+/g, " ");
   const sentences = splitSentences(raw).filter(
     (sentence) => !FORBIDDEN_SENTENCE_PATTERNS.some((pattern) => pattern.test(sentence)),
   );
