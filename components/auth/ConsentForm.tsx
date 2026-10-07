@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useWorld } from "@/lib/world/WorldContext";
 import { GLASS_CARD } from "@/components/glassCard";
 import { CONSENT_ITEMS, type ConsentType } from "@/lib/auth/consents";
@@ -11,7 +10,6 @@ import { cancelSignup, submitConsents } from "@/app/welcome/actions";
 
 export function ConsentForm({ next }: { next: string }) {
   const { flyTo } = useWorld();
-  const router = useRouter();
   useBottomNavHidden(true);
   const [checked, setChecked] = useState<Record<ConsentType, boolean>>({
     terms: false,
@@ -57,8 +55,7 @@ export function ConsentForm({ next }: { next: string }) {
         // 서버 쿠키 정리가 실패해도 브라우저 세션은 아래에서 끊는다
       }
       await getSupabaseBrowserClient().auth.signOut({ scope: "local" });
-      router.replace("/");
-      router.refresh();
+      window.location.replace("/");
     });
   };
 

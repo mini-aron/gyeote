@@ -77,16 +77,14 @@ export async function readBookmarkedIds(kind: BookmarkKind): Promise<string[] | 
   return (data as unknown as Record<string, string>[]).map((row) => row[table.column]);
 }
 
-export async function isBookmarked(kind: BookmarkKind, id: unknown): Promise<boolean> {
+export async function isBookmarkedBy(userId: string, kind: BookmarkKind, id: unknown): Promise<boolean> {
   if (!isUuid(id)) return false;
-  const user = await getCurrentUser();
-  if (!user) return false;
   const table = TABLES[kind];
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase
     .from(table.bookmarks)
     .select(table.column)
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq(table.column, id)
     .maybeSingle();
   return Boolean(data);

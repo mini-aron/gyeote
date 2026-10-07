@@ -28,6 +28,14 @@ export function parseMonth(value: string | undefined, fallback: string): { year:
   return { year, month };
 }
 
+export function isValidMonthString(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const match = value.match(MONTH_PATTERN);
+  if (!match) return false;
+  const [year, month] = [Number(match[1]), Number(match[2])];
+  return month >= 1 && month <= 12 && year >= MIN_YEAR && year <= MAX_YEAR;
+}
+
 export function formatMonthKey(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, "0")}`;
 }

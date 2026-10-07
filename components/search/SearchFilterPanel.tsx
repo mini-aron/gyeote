@@ -1,51 +1,166 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { GLASS_CARD } from "@/components/glassCard";
 import { buildSearchHref, MAX_QUERY_LENGTH, type SearchFilters } from "@/lib/search/searchQuery";
 import type { SearchOptions, TagOption } from "@/lib/search/types";
 
 type TagKey = "theme" | "situation" | "mood";
 
+const FILTER_DEBOUNCE_MS = 250;
+
 const TESTAMENTS = [
   { key: "old", label: "구약" },
   { key: "new", label: "신약" },
 ] as const;
 
+const TABS = [
+  { key: "verse", label: "말씀" },
+  { key: "song", label: "찬양" },
+] as const;
+
 export function SearchFilterPanel({ filters, options }: { filters: SearchFilters; options: SearchOptions }) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancel = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  }, []);
+
+  const schedule = useCallback(
+    (run: () => void) => {
+      cancel();
+      timer.current = setTimeout(() => {
+        timer.current = null;
+        run();
+      }, FILTER_DEBOUNCE_MS);
+    },
+    [cancel],
+  );
+
+  const isScheduled = useCallback(() => timer.current !== null, []);
+
+  return (
+    <>
+      <div role="tablist" className={`${GLASS_CARD} flex p-1 text-sm`}>
+        {TABS.map((tab) => (
+          <Link
+            key={tab.key}
+            href={buildSearchHref({ type: tab.key })}
+            role="tab"
+            aria-selected={filters.type === tab.key}
+            replace
+            scroll={false}
+            onClick={cancel}
+            className={`flex-1 rounded-xl py-2 text-center transition-colors ${
+              filters.type === tab.key ? "bg-white/15 text-[#f4f1ff]" : "text-[#f4f1ff]/60"
+            }`}
+          >
+            {tab.label}
+          </Link>
+        ))}
+      </div>
+      <FilterBody
+        key={filters.type}
+        filters={filters}
+        options={options}
+        schedule={schedule}
+        cancel={cancel}
+        isScheduled={isScheduled}
+      />
+    </>
+  );
+}
+
+interface FilterBodyProps {
+  filters: SearchFilters;
+  options: SearchOptions;
+  schedule: (run: () => void) => void;
+  cancel: () => void;
+  isScheduled: () => boolean;
+}
+
+function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterBodyProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [draft, setDraft] = useState(filters);
+  const draftRef = useRef(filters);
+  const targetHref = useRef(buildSearchHref({ ...filters, limit: undefined }));
 
-  const go = (next: Partial<SearchFilters>) => {
-    const href = buildSearchHref({ ...filters, limit: undefined, ...next });
+  const push = (next: SearchFilters) => {
+    const href = buildSearchHref({ ...next, limit: undefined });
+    if (href === targetHref.current) return;
+    targetHref.current = href;
     startTransition(() => router.replace(href, { scroll: false }));
   };
 
+  // 서버가 내려준 값이 바뀌면(뒤로가기·전환 완료) 초안을 맞추되, 입력 대기 중이거나 이동 중이면 건드리지 않는다.
+  useEffect(() => {
+    if (isScheduled() || pending) return;
+    targetHref.current = buildSearchHref({ ...filters, limit: undefined });
+    draftRef.current = filters;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 입력 대기 여부가 ref라 렌더 중 비교할 수 없다
+    setDraft(filters);
+  }, [filters, pending, isScheduled]);
+
+  // iOS 스와이프 뒤로가기가 대기 중인 replace에 덮이지 않게 한다.
+  useEffect(() => {
+    window.addEventListener("popstate", cancel);
+    return () => {
+      window.removeEventListener("popstate", cancel);
+      cancel();
+    };
+  }, [cancel]);
+
+  const go = (next: Partial<SearchFilters>) => {
+    const merged = { ...draftRef.current, ...next };
+    draftRef.current = merged;
+    setDraft(merged);
+    schedule(() => push(draftRef.current));
+  };
+
+  const goNow = (next: Partial<SearchFilters>) => {
+    const merged = { ...draftRef.current, ...next };
+    draftRef.current = merged;
+    setDraft(merged);
+    cancel();
+    push(merged);
+  };
+
   const toggleTag = (key: TagKey, id: string) => {
-    const current = filters[key];
+    const current = draftRef.current[key];
     go({ [key]: current.includes(id) ? current.filter((value) => value !== id) : [...current, id] });
   };
 
-  const booksOfTestament = options.books.filter((book) => book.testament === filters.testament);
+  const booksOfTestament = options.books.filter((book) => book.testament === draft.testament);
   const categories = [...new Set(booksOfTestament.map((book) => book.category))];
-  const visibleBooks = filters.category
-    ? booksOfTestament.filter((book) => book.category === filters.category)
+  const visibleBooks = draft.category
+    ? booksOfTestament.filter((book) => book.category === draft.category)
     : booksOfTestament;
 
   const hasFilter =
-    filters.theme.length + filters.situation.length + filters.mood.length > 0 ||
-    Boolean(filters.testament || filters.q);
+    draft.theme.length + draft.situation.length + draft.mood.length > 0 ||
+    Boolean(draft.testament || draft.q || draft.bookmarked);
 
   return (
     <section className={`${GLASS_CARD} flex flex-col gap-4 px-4 py-4 transition-opacity ${pending ? "opacity-70" : ""}`}>
+      <FilterGroup label="북마크">
+        <ChipRow>
+          <Chip selected={draft.bookmarked} onClick={() => go({ bookmarked: !draft.bookmarked })}>
+            북마크한 것만
+          </Chip>
+        </ChipRow>
+      </FilterGroup>
+
       {filters.type === "song" && (
         <form
           key={filters.q}
           onSubmit={(event) => {
             event.preventDefault();
             const value = new FormData(event.currentTarget).get("q");
-            go({ q: typeof value === "string" ? value.trim() : "" });
+            goNow({ q: typeof value === "string" ? value.trim() : "" });
           }}
           className="flex gap-2"
         >
@@ -72,10 +187,10 @@ export function SearchFilterPanel({ filters, options }: { filters: SearchFilters
             {TESTAMENTS.map((item) => (
               <Chip
                 key={item.key}
-                selected={filters.testament === item.key}
+                selected={draft.testament === item.key}
                 onClick={() =>
                   go({
-                    testament: filters.testament === item.key ? undefined : item.key,
+                    testament: draft.testament === item.key ? undefined : item.key,
                     category: undefined,
                     book: undefined,
                     chapter: undefined,
@@ -86,15 +201,15 @@ export function SearchFilterPanel({ filters, options }: { filters: SearchFilters
               </Chip>
             ))}
           </ChipRow>
-          {filters.testament && (
+          {draft.testament && (
             <ChipRow>
               {categories.map((category) => (
                 <Chip
                   key={category}
-                  selected={filters.category === category}
+                  selected={draft.category === category}
                   onClick={() =>
                     go({
-                      category: filters.category === category ? undefined : category,
+                      category: draft.category === category ? undefined : category,
                       book: undefined,
                       chapter: undefined,
                     })
@@ -105,15 +220,15 @@ export function SearchFilterPanel({ filters, options }: { filters: SearchFilters
               ))}
             </ChipRow>
           )}
-          {filters.testament && (
+          {draft.testament && (
             <ChipRow>
               {visibleBooks.map((book) => (
                 <Chip
                   key={book.id}
-                  selected={filters.book === book.id}
+                  selected={draft.book === book.id}
                   disabled={!book.hasVerses}
                   onClick={() =>
-                    go({ book: filters.book === book.id ? undefined : book.id, chapter: undefined })
+                    go({ book: draft.book === book.id ? undefined : book.id, chapter: undefined })
                   }
                 >
                   {book.name}
@@ -121,13 +236,13 @@ export function SearchFilterPanel({ filters, options }: { filters: SearchFilters
               ))}
             </ChipRow>
           )}
-          {filters.book && options.chapters.length > 0 && (
+          {draft.book && draft.book === filters.book && options.chapters.length > 0 && (
             <ChipRow>
               {options.chapters.map((chapter) => (
                 <Chip
                   key={chapter}
-                  selected={filters.chapter === chapter}
-                  onClick={() => go({ chapter: filters.chapter === chapter ? undefined : chapter })}
+                  selected={draft.chapter === chapter}
+                  onClick={() => go({ chapter: draft.chapter === chapter ? undefined : chapter })}
                 >
                   {chapter}장
                 </Chip>
@@ -137,21 +252,23 @@ export function SearchFilterPanel({ filters, options }: { filters: SearchFilters
         </FilterGroup>
       )}
 
-      <TagGroup label="주제" tags={options.themes} selected={filters.theme} onToggle={(id) => toggleTag("theme", id)} />
+      <TagGroup label="주제" tags={options.themes} selected={draft.theme} onToggle={(id) => toggleTag("theme", id)} />
       <TagGroup
         label="상황"
         tags={options.situations}
-        selected={filters.situation}
+        selected={draft.situation}
         onToggle={(id) => toggleTag("situation", id)}
       />
       {filters.type === "song" && (
-        <TagGroup label="분위기" tags={options.moods} selected={filters.mood} onToggle={(id) => toggleTag("mood", id)} />
+        <TagGroup label="분위기" tags={options.moods} selected={draft.mood} onToggle={(id) => toggleTag("mood", id)} />
       )}
 
       {hasFilter && (
         <button
           type="button"
-          onClick={() => startTransition(() => router.replace(buildSearchHref({ type: filters.type }), { scroll: false }))}
+          onClick={() => {
+            goNow({ theme: [], situation: [], mood: [], testament: undefined, category: undefined, book: undefined, chapter: undefined, q: "", bookmarked: false });
+          }}
           className="self-start text-xs text-[#c9bcff] underline underline-offset-2"
         >
           필터 초기화

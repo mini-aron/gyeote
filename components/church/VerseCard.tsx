@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { GLASS_CARD } from "@/components/glassCard";
 import { BookmarkButton } from "@/components/bookmarks/BookmarkButton";
+import type { BookmarkState } from "@/lib/bookmarks/types";
 import type { VerseResult } from "@/lib/recommend/types";
 
 // 본문을 접었을 때 보이는 높이 — 15px 글씨·28px 줄 간격 기준 약 4줄.
@@ -15,7 +16,7 @@ export function VerseCard({
   onBeforeLogin,
 }: {
   verse: VerseResult | null;
-  bookmarked?: boolean;
+  bookmarked: BookmarkState;
   collapsed?: boolean;
   onBeforeLogin?: () => void;
 }) {

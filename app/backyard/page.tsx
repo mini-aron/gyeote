@@ -11,9 +11,11 @@ import { useResumeResult } from "@/lib/bookmarks/useResumeResult";
 import { useWorld } from "@/lib/world/WorldContext";
 import { saveDraft } from "@/lib/backyard/draft";
 import { combineWithChurchContext, takeChurchContext } from "@/lib/backyard/churchContext";
+import { revalidateCounselRecords } from "@/lib/calendar/actions";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
 import type { AnalysisResult } from "@/lib/analysis/types";
+import { REQUEST_TIMEOUT_MS, requestJson } from "@/shared/lib/requestJson";
 import { createClientRequestId } from "@/lib/counsel/clientRequestId";
 import type { ChurchTurn, CounselTranscript } from "@/lib/counsel/transcript";
 
@@ -35,6 +37,10 @@ export default function BackyardPage() {
   const [counselRecordId, setCounselRecordId] = useState<string | null>(null);
   const clientRequestId = useRef<string | undefined>(undefined);
   const hasTakenChurchContext = useRef(false);
+  const inputInFlight = useRef(false);
+  const recommendInFlight = useRef(false);
+  const [songLoading, setSongLoading] = useState(false);
+  const requestController = useRef<AbortController | null>(null);
   useBottomNavHidden(phase === "input");
 
   useResumeResult("backyard", {
@@ -46,6 +52,10 @@ export default function BackyardPage() {
       setPhase("result");
     },
   });
+
+  useEffect(() => {
+    return () => requestController.current?.abort();
+  }, []);
 
   useEffect(() => {
     flyTo("backyard");
@@ -69,14 +79,18 @@ export default function BackyardPage() {
       recordId: string | null,
       include?: { verse?: boolean; song?: boolean },
     ): Promise<boolean> => {
-      setPhase("loading");
+      if (recommendInFlight.current) return false;
+      recommendInFlight.current = true;
+      const controller = new AbortController();
+      requestController.current = controller;
+      if (include?.verse === false) setSongLoading(true);
+      else setPhase("loading");
       try {
         const history = getRecommendationHistory();
         clientRequestId.current ??= createClientRequestId();
-        const response = await fetch("/api/recommend", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const data = await requestJson<RecommendResult>(
+          "/api/recommend",
+          {
             tags: tagsToUse,
             history,
             include,
@@ -85,11 +99,10 @@ export default function BackyardPage() {
             transcript: include?.verse === false ? undefined : (payload ?? undefined),
             clientRequestId: clientRequestId.current,
             counselRecordId: recordId ?? undefined,
-          }),
-        });
-        if (!response.ok) throw new Error("recommend_failed");
-
-        const data = (await response.json()) as RecommendResult;
+          },
+          { timeoutMs: REQUEST_TIMEOUT_MS.recommend, signal: controller.signal },
+        );
+        if (controller.signal.aborted) return false;
         setResult((prev) => ({
           verse: include?.verse === false ? (prev?.verse ?? null) : data.verse,
           song:
@@ -106,11 +119,16 @@ export default function BackyardPage() {
           date: new Date().toISOString(),
         });
         setEncouragement((prev) => data.resultLine ?? prev);
+        if (data.counselRecordId && (include?.verse !== false || data.rerollStatus === "ok")) void revalidateCounselRecords().catch(() => {});
         setPhase("result");
         return true;
       } catch {
+        if (controller.signal.aborted) return false;
         setPhase(include?.verse === false ? "result" : "error");
         return false;
+      } finally {
+        recommendInFlight.current = false;
+        setSongLoading(false);
       }
     },
     [],
@@ -118,6 +136,8 @@ export default function BackyardPage() {
 
   const handleInputFinish = useCallback(
     async (writtenText: string) => {
+      if (inputInFlight.current) return;
+      inputInFlight.current = true;
       const fullText = combineWithChurchContext(churchTranscript, writtenText);
       setText(fullText);
       const payload: CounselTranscript = { version: 1 };
@@ -125,15 +145,18 @@ export default function BackyardPage() {
       if (writtenText) payload.backyard = { text: writtenText };
       setTranscriptPayload(payload);
       setPhase("loading");
+      const controller = new AbortController();
+      requestController.current = controller;
       try {
-        const response = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcript: fullText, source: "backyard" }),
-        });
-        if (!response.ok) throw new Error("analyze_failed");
-
-        const analyzed = (await response.json()) as AnalysisResult;
+        const analyzed = await requestJson<AnalysisResult>(
+          "/api/analyze",
+          { transcript: fullText, source: "backyard" },
+          { timeoutMs: REQUEST_TIMEOUT_MS.analyze, signal: controller.signal },
+        );
+        if (controller.signal.aborted) {
+          saveDraft(writtenText);
+          return;
+        }
         if (analyzed.crisis) {
           setPhase("crisis");
           return;
@@ -143,14 +166,17 @@ export default function BackyardPage() {
       } catch {
         // BackyardInput이 제출 시 임시 저장을 지우므로, 실패하면 다시 저장해 글을 잃지 않게 한다.
         saveDraft(writtenText);
+        if (controller.signal.aborted) return;
         setPhase("error");
+      } finally {
+        inputInFlight.current = false;
       }
     },
     [churchTranscript, churchTurns, fetchRecommendation],
   );
 
   const handleRetrySong = useCallback(() => {
-    if (!tags || songRetries >= MAX_SONG_RETRIES) return;
+    if (!tags || songRetries >= MAX_SONG_RETRIES || recommendInFlight.current) return;
     setSongRetries((count) => count + 1);
     void fetchRecommendation(tags, text, transcriptPayload, counselRecordId, { verse: false, song: true });
   }, [counselRecordId, fetchRecommendation, songRetries, tags, text, transcriptPayload]);
@@ -195,6 +221,7 @@ export default function BackyardPage() {
           verse={result?.verse ?? null}
           song={result?.song ?? null}
           retriesLeft={MAX_SONG_RETRIES - songRetries}
+          songLoading={songLoading}
           onRetrySong={handleRetrySong}
           onRestart={handleRestart}
         />

@@ -6,6 +6,7 @@ import { SongCard } from "./SongCard";
 import type { RecommendResult } from "@/lib/recommend/types";
 import { buildShareText } from "@/lib/share/buildShareText";
 import { savePendingResult } from "@/lib/bookmarks/pendingResult";
+import { useBookmarkStatus } from "@/components/bookmarks/useBookmarkStatus";
 import { SpeechBubble } from "@/components/SpeechBubble";
 
 interface ChurchResultProps {
@@ -13,6 +14,7 @@ interface ChurchResultProps {
   verse: RecommendResult["verse"];
   song: RecommendResult["song"];
   retriesLeft: number;
+  songLoading: boolean;
   onRetrySong: () => void;
   onRestart: () => void;
   onMoveToBackyard: () => void;
@@ -23,10 +25,12 @@ export function ChurchResult({
   verse,
   song,
   retriesLeft,
+  songLoading,
   onRetrySong,
   onRestart,
   onMoveToBackyard,
 }: ChurchResultProps) {
+  const bookmarkStatus = useBookmarkStatus(verse?.id, song?.id);
   const saveSnapshot = () => savePendingResult({ mode: "church", verse, song, resultLine });
 
   async function handleShare() {
@@ -54,15 +58,17 @@ export function ChurchResult({
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
         {resultLine && <SpeechBubble>{resultLine}</SpeechBubble>}
-        <VerseCard verse={verse} onBeforeLogin={saveSnapshot} />
-        <SongCard song={song} onBeforeLogin={saveSnapshot} />
+        <VerseCard verse={verse} bookmarked={bookmarkStatus.verse} onBeforeLogin={saveSnapshot} />
+        <div aria-busy={songLoading} className={songLoading ? "pointer-events-none transition-opacity motion-safe:animate-pulse motion-reduce:opacity-50" : "transition-opacity"}>
+          <SongCard song={song} bookmarked={bookmarkStatus.song} onBeforeLogin={saveSnapshot} />
+        </div>
         <div className="flex flex-wrap gap-2 text-xs">
-          <ActionButton onClick={onRetrySong} disabled={retriesLeft <= 0}>
+          <ActionButton onClick={onRetrySong} disabled={retriesLeft <= 0 || songLoading}>
             다른 곡 추천받기{retriesLeft > 0 ? ` (${retriesLeft}회 남음)` : ""}
           </ActionButton>
-          <ActionButton onClick={onMoveToBackyard}>뒤뜰에서 더 얘기하기</ActionButton>
+          <ActionButton onClick={onMoveToBackyard} disabled={songLoading}>뒤뜰에서 더 얘기하기</ActionButton>
           <ActionButton onClick={handleShare}>공유하기</ActionButton>
-          <ActionButton onClick={onRestart}>처음부터</ActionButton>
+          <ActionButton onClick={onRestart} disabled={songLoading}>처음부터</ActionButton>
         </div>
       </div>
     </div>

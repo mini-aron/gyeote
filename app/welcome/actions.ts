@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/shared/lib/auth";
 import { createSupabaseServerClient } from "@/shared/lib/supabase-server";
@@ -27,6 +28,8 @@ export async function submitConsents(input: { consents: Record<ConsentType, bool
   const { error } = await supabaseAdmin.from("user_consents").insert(rows);
   if (error) throw new Error("consent_insert_failed");
 
+  // 어느 경로든 revalidate가 일어나면 클라이언트 라우터 캐시 전체가 비워지므로 범위는 좁게 둔다.
+  revalidatePath("/welcome");
   redirect(sanitizeNextPath(input.next));
 }
 

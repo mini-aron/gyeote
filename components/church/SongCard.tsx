@@ -1,3 +1,4 @@
+import type { BookmarkState } from "@/lib/bookmarks/types";
 import type { SongResult } from "@/lib/recommend/types";
 import { GLASS_CARD } from "@/components/glassCard";
 import { BookmarkButton } from "@/components/bookmarks/BookmarkButton";
@@ -8,7 +9,7 @@ export function SongCard({
   onBeforeLogin,
 }: {
   song: SongResult | null;
-  bookmarked?: boolean;
+  bookmarked: BookmarkState;
   onBeforeLogin?: () => void;
 }) {
   if (!song) {

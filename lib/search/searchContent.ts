@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/shared/lib/supabase-client";
+import { getBibleBooks } from "@/lib/catalog/catalogCache";
 import { fetchAllRows } from "@/lib/search/fetchAllRows";
 import type { SearchFilters } from "@/lib/search/searchQuery";
 import type { SongResult, VerseResult } from "@/lib/recommend/types";
@@ -18,14 +19,16 @@ async function idsMatchingTags(kind: "verse" | "song", filters: SearchFilters): 
   ];
   if (kind === "song") groups.push({ table: "song_moods", column: "mood_id", ids: filters.mood });
 
-  const matchedSets: Set<string>[] = [];
-  for (const group of groups) {
-    if (group.ids.length === 0) continue;
-    const rows = await fetchAllRows<Record<string, string>>((from, to) =>
-      supabaseAdmin.from(group.table).select(`${kind}_id`).in(group.column, group.ids).order(`${kind}_id`).order(group.column).range(from, to),
-    );
-    matchedSets.push(new Set(rows.map((row) => row[`${kind}_id`])));
-  }
+  const matchedSets = await Promise.all(
+    groups
+      .filter((group) => group.ids.length > 0)
+      .map(async (group) => {
+        const rows = await fetchAllRows<Record<string, string>>((from, to) =>
+          supabaseAdmin.from(group.table).select(`${kind}_id`).in(group.column, group.ids).order(`${kind}_id`).order(group.column).range(from, to),
+        );
+        return new Set(rows.map((row) => row[`${kind}_id`]));
+      }),
+  );
   if (matchedSets.length === 0) return null;
   const [first, ...rest] = matchedSets;
   return new Set([...first].filter((id) => rest.every((set) => set.has(id))));
@@ -33,13 +36,15 @@ async function idsMatchingTags(kind: "verse" | "song", filters: SearchFilters): 
 
 async function resolveBookIds(filters: SearchFilters): Promise<number[] | null> {
   if (!filters.testament && !filters.book) return null;
-  let query = supabaseAdmin.from("bible_books").select("id");
-  if (filters.testament) query = query.eq("testament", filters.testament);
-  if (filters.category) query = query.eq("category", filters.category);
-  if (filters.book) query = query.eq("id", filters.book);
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []).map((row) => row.id as number);
+  const books = await getBibleBooks();
+  return books
+    .filter(
+      (book) =>
+        (!filters.testament || book.testament === filters.testament) &&
+        (!filters.category || book.category === filters.category) &&
+        (!filters.book || book.id === filters.book),
+    )
+    .map((book) => book.id);
 }
 
 async function fetchByIds<T extends { id: string }>(
@@ -59,7 +64,13 @@ async function fetchByIds<T extends { id: string }>(
   return new Map(results.flat().map((row) => [row.id, row]));
 }
 
-export async function searchVerses(filters: SearchFilters): Promise<SearchPage<VerseResult>> {
+// bookmarkedIds는 회원별 데이터라 호출자가 요청 단위로 넘긴다 (카탈로그 캐시에 섞지 않는다).
+export async function searchVerses(
+  filters: SearchFilters,
+  offset = 0,
+  bookmarkedIds: string[] = [],
+): Promise<SearchPage<VerseResult>> {
+  if (filters.bookmarked && bookmarkedIds.length === 0) return { items: [], total: 0 };
   const [bookIds, tagIds] = await Promise.all([resolveBookIds(filters), idsMatchingTags("verse", filters)]);
   if (bookIds && bookIds.length === 0) return { items: [], total: 0 };
 
@@ -70,8 +81,11 @@ export async function searchVerses(filters: SearchFilters): Promise<SearchPage<V
     return query.order("book_id").order("chapter").order("verse_start").order("id").range(from, to);
   });
 
-  const matched = candidates.map((row) => row.id).filter((id) => !tagIds || tagIds.has(id));
-  const pageIds = matched.slice(0, filters.limit);
+  const bookmarkedSet = filters.bookmarked ? new Set(bookmarkedIds) : null;
+  const matched = candidates
+    .map((row) => row.id)
+    .filter((id) => (!tagIds || tagIds.has(id)) && (!bookmarkedSet || bookmarkedSet.has(id)));
+  const pageIds = matched.slice(offset, offset + filters.limit);
   const rows = await fetchByIds<VerseResult>(
     "verses",
     "id, reference, body, translation, meaning, application",
@@ -86,18 +100,28 @@ function sanitizeKeyword(keyword: string): string {
   return keyword.replace(/[%_*\\,()"]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-export async function searchSongs(filters: SearchFilters): Promise<SearchPage<SongResult>> {
-  const tagIds = await idsMatchingTags("song", filters);
+export async function searchSongs(
+  filters: SearchFilters,
+  offset = 0,
+  bookmarkedIds: string[] = [],
+): Promise<SearchPage<SongResult>> {
+  if (filters.bookmarked && bookmarkedIds.length === 0) return { items: [], total: 0 };
   const keyword = sanitizeKeyword(filters.q);
 
-  const candidates = await fetchAllRows<{ id: string }>((from, to) => {
-    let query = supabaseAdmin.from("songs").select("id").eq("is_reviewed", true).eq("is_active", true);
-    if (keyword) query = query.or(`title.ilike."%${keyword}%",artist.ilike."%${keyword}%"`);
-    return query.order("title").order("id").range(from, to);
-  });
+  const [tagIds, candidates] = await Promise.all([
+    idsMatchingTags("song", filters),
+    fetchAllRows<{ id: string }>((from, to) => {
+      let query = supabaseAdmin.from("songs").select("id").eq("is_reviewed", true).eq("is_active", true);
+      if (keyword) query = query.or(`title.ilike."%${keyword}%",artist.ilike."%${keyword}%"`);
+      return query.order("title").order("id").range(from, to);
+    }),
+  ]);
 
-  const matched = candidates.map((row) => row.id).filter((id) => !tagIds || tagIds.has(id));
-  const pageIds = matched.slice(0, filters.limit);
+  const bookmarkedSet = filters.bookmarked ? new Set(bookmarkedIds) : null;
+  const matched = candidates
+    .map((row) => row.id)
+    .filter((id) => (!tagIds || tagIds.has(id)) && (!bookmarkedSet || bookmarkedSet.has(id)));
+  const pageIds = matched.slice(offset, offset + filters.limit);
   const rows = await fetchByIds<{
     id: string;
     title: string;

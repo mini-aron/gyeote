@@ -1,8 +1,9 @@
 import "server-only";
+import { cache } from "react";
 import { createSupabaseServerClient } from "@/shared/lib/supabase-server";
 import { CONSENT_VERSION, REQUIRED_CONSENT_TYPES } from "@/lib/auth/consents";
 
-export async function hasRequiredConsents(userId: string): Promise<boolean> {
+export const hasRequiredConsents = cache(async (userId: string): Promise<boolean> => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("user_consents")
@@ -20,4 +21,4 @@ export async function hasRequiredConsents(userId: string): Promise<boolean> {
     const row = latest.get(type);
     return row?.version === CONSENT_VERSION && row.agreed;
   });
-}
+});
