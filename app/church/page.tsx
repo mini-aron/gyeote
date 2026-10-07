@@ -17,6 +17,7 @@ import { getTimeBand } from "@/lib/greeting";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
 import type { AnalysisResult } from "@/lib/analysis/types";
+import { REQUEST_TIMEOUT_MS, requestJson } from "@/shared/lib/requestJson";
 import { createClientRequestId } from "@/lib/counsel/clientRequestId";
 import type { ChurchTurn } from "@/lib/counsel/transcript";
 
@@ -37,6 +38,10 @@ export default function ChurchPage() {
   const [turns, setTurns] = useState<ChurchTurn[]>([]);
   const [counselRecordId, setCounselRecordId] = useState<string | null>(null);
   const clientRequestId = useRef<string | undefined>(undefined);
+  const chatInFlight = useRef(false);
+  const recommendInFlight = useRef(false);
+  const [songLoading, setSongLoading] = useState(false);
+  const requestController = useRef<AbortController | null>(null);
   const router = useRouter();
   useBottomNavHidden(phase === "chat");
 
@@ -49,6 +54,10 @@ export default function ChurchPage() {
       setPhase("result");
     },
   });
+
+  useEffect(() => {
+    return () => requestController.current?.abort();
+  }, []);
 
   useEffect(() => {
     flyTo("church");
@@ -72,14 +81,18 @@ export default function ChurchPage() {
       recordId: string | null,
       include?: { verse?: boolean; song?: boolean },
     ) => {
-      setPhase("loading");
+      if (recommendInFlight.current) return;
+      recommendInFlight.current = true;
+      const controller = new AbortController();
+      requestController.current = controller;
+      if (include?.verse === false) setSongLoading(true);
+      else setPhase("loading");
       try {
         const history = getRecommendationHistory();
         clientRequestId.current ??= createClientRequestId();
-        const response = await fetch("/api/recommend", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const data = await requestJson<RecommendResult>(
+          "/api/recommend",
+          {
             tags: tagsToUse,
             history,
             include,
@@ -89,11 +102,10 @@ export default function ChurchPage() {
                 : undefined,
             clientRequestId: clientRequestId.current,
             counselRecordId: recordId ?? undefined,
-          }),
-        });
-        if (!response.ok) throw new Error("recommend_failed");
-
-        const data = (await response.json()) as RecommendResult;
+          },
+          { timeoutMs: REQUEST_TIMEOUT_MS.recommend, signal: controller.signal },
+        );
+        if (controller.signal.aborted) return;
         setResult((prev) => ({
           verse: include?.verse === false ? (prev?.verse ?? null) : data.verse,
           song:
@@ -114,7 +126,11 @@ export default function ChurchPage() {
         setResultLine((prev) => data.resultLine ?? prev);
         setPhase("result");
       } catch {
+        if (controller.signal.aborted) return;
         setPhase(include?.verse === false ? "result" : "error");
+      } finally {
+        recommendInFlight.current = false;
+        setSongLoading(false);
       }
     },
     [],
@@ -122,18 +138,20 @@ export default function ChurchPage() {
 
   const handleChatFinish = useCallback(
     async (chatTranscript: string, chatTurns: ChurchTurn[]) => {
+      if (chatInFlight.current) return;
+      chatInFlight.current = true;
       setTranscript(chatTranscript);
       setTurns(chatTurns);
       setPhase("loading");
+      const controller = new AbortController();
+      requestController.current = controller;
       try {
-        const response = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcript: chatTranscript }),
-        });
-        if (!response.ok) throw new Error("analyze_failed");
-
-        const analyzed = (await response.json()) as AnalysisResult;
+        const analyzed = await requestJson<AnalysisResult>(
+          "/api/analyze",
+          { transcript: chatTranscript },
+          { timeoutMs: REQUEST_TIMEOUT_MS.analyze, signal: controller.signal },
+        );
+        if (controller.signal.aborted) return;
         if (analyzed.crisis) {
           setPhase("crisis");
           return;
@@ -141,14 +159,17 @@ export default function ChurchPage() {
         setTags(analyzed);
         await fetchRecommendation(analyzed, chatTurns, null);
       } catch {
+        if (controller.signal.aborted) return;
         setPhase("error");
+      } finally {
+        chatInFlight.current = false;
       }
     },
     [fetchRecommendation],
   );
 
   const handleRetrySong = useCallback(() => {
-    if (!tags || songRetries >= MAX_SONG_RETRIES) return;
+    if (!tags || songRetries >= MAX_SONG_RETRIES || recommendInFlight.current) return;
     setSongRetries((count) => count + 1);
     void fetchRecommendation(tags, turns, counselRecordId, { verse: false, song: true });
   }, [counselRecordId, fetchRecommendation, songRetries, tags, turns]);
@@ -200,6 +221,7 @@ export default function ChurchPage() {
           verse={result?.verse ?? null}
           song={result?.song ?? null}
           retriesLeft={MAX_SONG_RETRIES - songRetries}
+          songLoading={songLoading}
           onRetrySong={handleRetrySong}
           onRestart={handleRestart}
           onMoveToBackyard={() => handleMoveToBackyard(transcript, turns, false)}

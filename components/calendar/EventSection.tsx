@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { GLASS_CARD } from "@/components/glassCard";
 import {
   createCalendarEvent,
@@ -52,7 +51,6 @@ export function EventSection({ date, events }: EventSectionProps) {
 }
 
 function EventItem({ event, onEdit }: { event: DayEvent; onEdit: () => void }) {
-  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -61,8 +59,7 @@ function EventItem({ event, onEdit }: { event: DayEvent; onEdit: () => void }) {
     setError(false);
     startTransition(async () => {
       const result = await deleteCalendarEvent(event.id);
-      if (result.ok) router.refresh();
-      else setError(true);
+      if (!result.ok) setError(true);
     });
   };
 
@@ -118,7 +115,6 @@ function EventItem({ event, onEdit }: { event: DayEvent; onEdit: () => void }) {
 }
 
 function EventForm({ date, event, onDone }: { date: string; event?: DayEvent; onDone: () => void }) {
-  const router = useRouter();
   const [title, setTitle] = useState(event?.title ?? "");
   const [time, setTime] = useState(event?.time ? formatEventTime(event.time) : "");
   const [memo, setMemo] = useState(event?.memo ?? "");
@@ -138,7 +134,6 @@ function EventForm({ date, event, onDone }: { date: string; event?: DayEvent; on
         ? await updateCalendarEvent({ ...input, id: event.id })
         : await createCalendarEvent(input);
       if (result.ok) {
-        router.refresh();
         onDone();
       } else {
         setError("저장하지 못했어요. 입력 내용을 확인하고 다시 시도해 주세요.");
