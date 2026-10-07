@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2B3378"/>
+      <stop offset="0.55" stop-color="#1D2350"/>
+      <stop offset="1" stop-color="#0D0B1A"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="512" cy="520" r="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFD9A0" stop-opacity="0.30"/>
+      <stop offset="0.5" stop-color="#C98BFF" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#C98BFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="light" cx="575" cy="560" r="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE3AE"/>
+      <stop offset="0.5" stop-color="#FFBC6A"/>
+      <stop offset="1" stop-color="#EC8A42"/>
+    </radialGradient>
+    <linearGradient id="spill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD08A" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFB46A" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0E1236"/>
+      <stop offset="1" stop-color="#1B2160"/>
+    </linearGradient>
+    <linearGradient id="frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#353D88"/>
+      <stop offset="1" stop-color="#262D6C"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="7"/></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="12"/></filter>
+    <clipPath id="opening"><path d="M362 772 V420 A150 150 0 0 1 662 420 V772 Z"/></clipPath>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <circle cx="512" cy="520" r="400" fill="url(#halo)"/>
+
+  <!-- stars -->
+  <g fill="#FFF3D6">
+    <circle cx="232" cy="236" r="6" opacity="0.9"/>
+    <circle cx="318" cy="168" r="3.5" opacity="0.6"/>
+    <circle cx="196" cy="420" r="3.5" opacity="0.5"/>
+    <circle cx="842" cy="404" r="4" opacity="0.6"/>
+    <circle cx="700" cy="150" r="3.5" opacity="0.55"/>
+    <path d="M790 196 Q796 236 836 242 Q796 248 790 288 Q784 248 744 242 Q784 236 790 196Z" opacity="0.95"/>
+  </g>
+
+  <!-- floor light spill -->
+  <path d="M424 772 L662 772 L830 1024 L380 1024 Z" fill="url(#spill)" filter="url(#soft)"/>
+
+  <!-- frame -->
+  <path d="M336 772 V420 A176 176 0 0 1 688 420 V772 Z" fill="url(#frame)"/>
+  <!-- glowing opening -->
+  <path d="M362 772 V420 A150 150 0 0 1 662 420 V772 Z" fill="url(#light)"/>
+
+  <!-- cross of light, partly hidden behind the door leaf -->
+  <g clip-path="url(#opening)">
+  <path d="M486 318 H538 V428 H616 V480 H538 V724 H486 V480 H408 V428 H486 Z" fill="#FFFFFF" filter="url(#glow)" opacity="0.85"/>
+  <path d="M490 322 H534 V432 H612 V476 H534 V720 H490 V476 H412 V432 H490 Z" fill="#FFFDF4"/>
+  </g>
+
+  <!-- door leaf, swung inward on the left hinge -->
+  <path d="M362 772 V420 C362 360 384 314 424 294 V748 Z" fill="url(#leaf)"/>
+  <path d="M424 294 V748" stroke="#FFE2AE" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="406" cy="540" r="8" fill="#FFC77A"/>
+
+  <!-- ground line -->
+  <rect x="240" y="770" width="544" height="4" rx="2" fill="#FFE2AE" opacity="0.18"/>
+</svg>
