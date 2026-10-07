@@ -101,22 +101,20 @@ export async function saveCounselRecord(input: SaveCounselInput): Promise<string
     const now = new Date();
     const localDate = getSeoulDateString(now);
 
-    const { count, error: countError } = await admin
-      .from("counsel_records")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("local_date", localDate);
+    const [{ count, error: countError }, { data: profile }] = await Promise.all([
+      admin
+        .from("counsel_records")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("local_date", localDate),
+      admin.from("profiles").select("keep_history").eq("user_id", userId).maybeSingle(),
+    ]);
     if (countError) {
       logFailure("일일 저장 건수 조회 실패", countError);
       return null;
     }
     if ((count ?? 0) >= DAILY_SAVE_LIMIT) return null;
 
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("keep_history")
-      .eq("user_id", userId)
-      .maybeSingle();
     const keepHistory = profile?.keep_history !== false;
 
     const { data, error } = await admin

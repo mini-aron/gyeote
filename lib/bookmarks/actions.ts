@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { changeBookmark, isBookmarked, type BookmarkMode } from "@/lib/bookmarks/bookmarkStore";
+import { changeBookmark, isBookmarkedBy, type BookmarkMode } from "@/lib/bookmarks/bookmarkStore";
+import { getCurrentUser } from "@/shared/lib/auth";
 import type { BookmarkKind, BookmarkResult, BookmarkStatus } from "@/lib/bookmarks/types";
 
 async function run(kind: BookmarkKind, id: string, mode: BookmarkMode): Promise<BookmarkResult> {
@@ -38,9 +39,11 @@ export async function getBookmarkStatus(input: {
   verseId?: string;
   songId?: string;
 }): Promise<BookmarkStatus> {
+  const user = await getCurrentUser();
+  if (!user) return { verse: false, song: false };
   const [verse, song] = await Promise.all([
-    isBookmarked("verse", input?.verseId),
-    isBookmarked("song", input?.songId),
+    isBookmarkedBy(user.id, "verse", input?.verseId),
+    isBookmarkedBy(user.id, "song", input?.songId),
   ]);
   return { verse, song };
 }
