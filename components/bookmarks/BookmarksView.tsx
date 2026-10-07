@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { GLASS_CARD } from "@/components/glassCard";
 import { VerseCard } from "@/components/church/VerseCard";
 import { useWorld } from "@/lib/world/WorldContext";
@@ -11,7 +11,6 @@ import type { BookmarkedSong, BookmarkedVerse } from "@/lib/bookmarks/types";
 type Tab = "verse" | "song";
 
 interface BookmarksViewProps {
-  tab: Tab;
   verses: BookmarkedVerse[];
   songs: BookmarkedSong[];
 }
@@ -21,7 +20,8 @@ const TABS: { key: Tab; label: string; href: string }[] = [
   { key: "song", label: "찬양", href: "/bookmarks?tab=song" },
 ];
 
-export function BookmarksView({ tab, verses, songs }: BookmarksViewProps) {
+export function BookmarksView({ verses, songs }: BookmarksViewProps) {
+  const tab: Tab = useSearchParams().get("tab") === "song" ? "song" : "verse";
   const { flyTo } = useWorld();
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
@@ -30,22 +30,28 @@ export function BookmarksView({ tab, verses, songs }: BookmarksViewProps) {
     flyTo("sky");
   }, [flyTo]);
 
-  const handleRemove = (id: string) => {
-    setRemoved((prev) => new Set(prev).add(id));
+  // replaceState는 useSearchParams와 동기화되면서 서버 렌더를 일으키지 않는다.
+  const handleTabChange = (href: string) => {
+    window.history.replaceState(null, "", href);
+  };
+
+  const handleRemove = (kind: Tab, id: string) => {
+    const key = `${kind}:${id}`;
+    setRemoved((prev) => new Set(prev).add(key));
     startTransition(async () => {
-      const result = await (tab === "verse" ? removeVerseBookmark(id) : removeSongBookmark(id));
+      const result = await (kind === "verse" ? removeVerseBookmark(id) : removeSongBookmark(id));
       if (result.error) {
         setRemoved((prev) => {
           const next = new Set(prev);
-          next.delete(id);
+          next.delete(key);
           return next;
         });
       }
     });
   };
 
-  const visibleVerses = verses.filter((item) => !removed.has(item.id));
-  const visibleSongs = songs.filter((item) => !removed.has(item.id));
+  const visibleVerses = verses.filter((item) => !removed.has(`verse:${item.id}`));
+  const visibleSongs = songs.filter((item) => !removed.has(`song:${item.id}`));
   const isEmpty = tab === "verse" ? visibleVerses.length === 0 : visibleSongs.length === 0;
 
   return (
@@ -55,18 +61,18 @@ export function BookmarksView({ tab, verses, songs }: BookmarksViewProps) {
 
         <div role="tablist" className={`${GLASS_CARD} flex p-1 text-sm`}>
           {TABS.map((item) => (
-            <Link
+            <button
               key={item.key}
-              href={item.href}
+              type="button"
               role="tab"
               aria-selected={tab === item.key}
-              replace
+              onClick={() => handleTabChange(item.href)}
               className={`flex-1 rounded-xl py-2 text-center transition-colors ${
                 tab === item.key ? "bg-white/15 text-[#f4f1ff]" : "text-[#f4f1ff]/60"
               }`}
             >
               {item.label}
-            </Link>
+            </button>
           ))}
         </div>
 
@@ -88,7 +94,7 @@ export function BookmarksView({ tab, verses, songs }: BookmarksViewProps) {
                   <p className="text-xs tracking-wide text-[#f4f1ff]/65">
                     {verse.reference} · {verse.translation}
                   </p>
-                  <RemoveButton onClick={() => handleRemove(verse.id)} />
+                  <RemoveButton onClick={() => handleRemove("verse", verse.id)} />
                 </div>
                 <p className="mt-2 text-sm text-[#f4f1ff]/60">더 이상 제공되지 않아요</p>
               </article>
@@ -103,7 +109,7 @@ export function BookmarksView({ tab, verses, songs }: BookmarksViewProps) {
                   <p className="text-sm font-medium">{song.title}</p>
                   <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
                 </div>
-                <RemoveButton onClick={() => handleRemove(song.id)} />
+                <RemoveButton onClick={() => handleRemove("song", song.id)} />
               </div>
               {song.isActive ? (
                 <a
