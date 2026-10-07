@@ -56,6 +56,7 @@ export function ChurchChat({
   // 명세: 뒤뜰은 한 번만 권하고, 거절하면 다시 권하지 않는다.
   const [backyardSuggestion, setBackyardSuggestion] = useState<BackyardSuggestion>("none");
   const hasFetchedFirstQuestion = useRef(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Strict Mode 이중 실행 방지 — 첫 질문을 두 번 요청하지 않게 한다
@@ -71,6 +72,11 @@ export function ChurchChat({
         setIsQuestionLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    const list = messageListRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [messages.length, isQuestionLoading]);
 
   async function answer(text: string, answerType: ChurchTurn["answerType"]) {
     const trimmed = text.trim();
@@ -119,9 +125,13 @@ export function ChurchChat({
   }
 
   return (
-    <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
-      <div className="pointer-events-auto flex flex-col gap-4">
-        <div className="flex flex-col gap-3">
+    // 문서 대신 메시지 목록만 스크롤시켜 입력창을 하단에 고정하고, 모바일 주소창 접힘에 따른 리사이즈도 막는다
+    <div className="pointer-events-none flex h-dvh flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
+      <div className="flex min-h-0 flex-col gap-4">
+        <div
+          ref={messageListRef}
+          className="pointer-events-auto flex min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain pt-6 [mask-image:linear-gradient(to_bottom,transparent,black_24px)] [scrollbar-width:none]"
+        >
           {messages.map((message, index) => (
             <ChatBubble key={index} from={message.from} text={message.text} />
           ))}
@@ -133,7 +143,7 @@ export function ChurchChat({
         </div>
 
         {backyardSuggestion === "shown" && (
-          <div className="flex flex-col gap-2 rounded-2xl border border-[#ffd9a8]/20 bg-[#ffd9a8]/[0.06] px-4 py-3">
+          <div className="pointer-events-auto flex shrink-0 flex-col gap-2 rounded-2xl border border-[#ffd9a8]/20 bg-[#ffd9a8]/[0.06] px-4 py-3">
             <p className="text-sm leading-relaxed text-[#f4f1ff]">{BACKYARD_SUGGESTION_TEXT}</p>
             <div className="flex gap-2 text-xs">
               <button
@@ -155,7 +165,7 @@ export function ChurchChat({
         )}
 
         {currentQuestion && !isQuestionLoading && (
-          <div className="flex flex-wrap gap-2">
+          <div className="pointer-events-auto flex shrink-0 flex-wrap gap-2">
             {currentQuestion.choices.map((choice) => (
               <button
                 key={choice}
@@ -179,7 +189,7 @@ export function ChurchChat({
         )}
 
         <form
-          className="flex items-center gap-2"
+          className="pointer-events-auto flex shrink-0 items-center gap-2"
           onSubmit={(event) => {
             event.preventDefault();
             answer(freeText, "free");
@@ -206,7 +216,7 @@ export function ChurchChat({
           <button
             type="button"
             onClick={() => onMoveToBackyard(formatTranscript(messages), turns)}
-            className="self-center text-xs text-[#f4f1ff]/50 underline-offset-4 transition-colors hover:text-[#f4f1ff]/80 hover:underline"
+            className="pointer-events-auto shrink-0 self-center text-xs text-[#f4f1ff]/50 underline-offset-4 transition-colors hover:text-[#f4f1ff]/80 hover:underline"
           >
             뒤뜰에서 더 얘기할래
           </button>

@@ -30,7 +30,7 @@ export function WorldBackground() {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="fixed inset-0 h-full w-full touch-none"
+      className="fixed inset-x-0 top-0 h-lvh w-full touch-none"
     />
   );
 }
