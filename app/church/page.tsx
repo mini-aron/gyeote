@@ -14,6 +14,7 @@ import { useWorld } from "@/lib/world/WorldContext";
 import { saveChurchContext } from "@/lib/backyard/churchContext";
 import { getMoodForTimeBand, type MoodKey } from "@/lib/world/moods";
 import { getTimeBand } from "@/lib/greeting";
+import { revalidateCounselRecords } from "@/lib/calendar/actions";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
 import type { AnalysisResult } from "@/lib/analysis/types";
@@ -124,6 +125,7 @@ export default function ChurchPage() {
         // 곡만 다시 뽑는 재시도에서는 서버가 resultLine을 아예 안 보낸다 —
         // 기존 글을 그대로 둔다.
         setResultLine((prev) => data.resultLine ?? prev);
+        if (data.counselRecordId && (include?.verse !== false || data.rerollStatus === "ok")) void revalidateCounselRecords().catch(() => {});
         setPhase("result");
       } catch {
         if (controller.signal.aborted) return;

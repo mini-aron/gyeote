@@ -11,6 +11,7 @@ import { useResumeResult } from "@/lib/bookmarks/useResumeResult";
 import { useWorld } from "@/lib/world/WorldContext";
 import { saveDraft } from "@/lib/backyard/draft";
 import { combineWithChurchContext, takeChurchContext } from "@/lib/backyard/churchContext";
+import { revalidateCounselRecords } from "@/lib/calendar/actions";
 import { getRecommendationHistory, recordRecommendation } from "@/lib/recommend/history";
 import type { RecommendResult } from "@/lib/recommend/types";
 import type { AnalysisResult } from "@/lib/analysis/types";
@@ -118,6 +119,7 @@ export default function BackyardPage() {
           date: new Date().toISOString(),
         });
         setEncouragement((prev) => data.resultLine ?? prev);
+        if (data.counselRecordId && (include?.verse !== false || data.rerollStatus === "ok")) void revalidateCounselRecords().catch(() => {});
         setPhase("result");
         return true;
       } catch {

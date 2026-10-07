@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { GLASS_CARD } from "@/components/glassCard";
 import { useWorld } from "@/lib/world/WorldContext";
 import { CONSENT_ITEMS, CONSENT_VERSION, type ConsentType } from "@/lib/auth/consents";
@@ -52,7 +51,6 @@ function Toggle({
 
 export function MeView({ info }: { info: MyInfo }) {
   const { flyTo } = useWorld();
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [keepHistory, setKeepHistory] = useState(info.keepHistory);
   const [consents, setConsents] = useState(info.consents);
@@ -123,8 +121,7 @@ export function MeView({ info }: { info: MyInfo }) {
   const handleSignOut = () => {
     startTransition(async () => {
       await getSupabaseBrowserClient().auth.signOut({ scope: "local" });
-      router.replace("/");
-      router.refresh();
+      window.location.replace("/");
     });
   };
 
@@ -138,8 +135,7 @@ export function MeView({ info }: { info: MyInfo }) {
           return;
         }
         await getSupabaseBrowserClient().auth.signOut({ scope: "local" });
-        router.replace("/?deleted=1");
-        router.refresh();
+        window.location.replace("/?deleted=1");
       } catch {
         setError(DEFAULT_ERROR);
       }
