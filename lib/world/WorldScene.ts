@@ -156,14 +156,16 @@ export class WorldScene {
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
-    this.renderer.setSize(window.innerWidth, window.innerHeight, false);
+    const width = canvas.clientWidth || window.innerWidth;
+    const height = canvas.clientHeight || window.innerHeight;
+    this.renderer.setSize(width, height, false);
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0x000000, 20, 120);
 
     this.camera = new THREE.PerspectiveCamera(
       46,
-      window.innerWidth / window.innerHeight,
+      width / height,
       0.1,
       900,
     );
@@ -958,9 +960,16 @@ export class WorldScene {
   }
 
   private resize(): void {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    // 캔버스는 lvh 고정이라 모바일 주소창이 접히고 펴질 때는 크기가 그대로다 — 이때 setSize로 버퍼를 비우면 배경이 깜박인다
+    const width = this.canvas.clientWidth;
+    const height = this.canvas.clientHeight;
+    const size = this.renderer.getSize(new THREE.Vector2());
+    if (size.x === width && size.y === height) return;
+
+    this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight, false);
+    this.renderer.setSize(width, height, false);
+    this.renderer.render(this.scene, this.camera);
   }
 
   private startLoop(): void {
