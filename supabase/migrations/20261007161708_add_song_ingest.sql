@@ -77,12 +77,20 @@ declare
   v_theme_names text[];
   v_situation_names text[];
   v_mood_names text[];
+  v_dedupe_key text;
 begin
   if not exists (select 1 from admins where user_id = p_reviewer) then
     raise exception 'reviewer % is not an admin', p_reviewer;
   end if;
 
-  -- 조건부 UPDATE로 동시 승인을 막는다
+  -- 서로 다른 후보 행의 동시 승인은 행 잠금으로 못 막으므로 같은 곡(dedupe_key)끼리 직렬화한다 (90001은 이 함수 전용 잠금 네임스페이스)
+  -- 키를 읽은 뒤 바뀌었으면 아래 UPDATE가 0행이 되어 승인되지 않는다
+  select dedupe_key into v_dedupe_key from song_candidates where id = p_candidate_id;
+  if v_dedupe_key is not null then
+    perform pg_advisory_xact_lock(90001, hashtext(v_dedupe_key));
+  end if;
+
+  -- 조건부 UPDATE로 같은 후보의 동시 승인을 막는다
   update song_candidates
   set status = 'approved',
       reviewed_by = p_reviewer,
@@ -93,10 +101,20 @@ begin
     and youtube_video_id is not null
     and embeddable
     and possible_duplicate_song_id is null
+    and dedupe_key is not distinct from v_dedupe_key
   returning * into v_candidate;
 
   if not found then
     raise exception 'candidate % is not approvable', p_candidate_id;
+  end if;
+
+  if v_candidate.dedupe_key is not null and exists (
+    select 1 from song_candidates
+    where dedupe_key = v_candidate.dedupe_key
+      and id <> p_candidate_id
+      and status = 'approved'
+  ) then
+    raise exception 'candidate % duplicates an already approved song', p_candidate_id;
   end if;
 
   if coalesce(btrim(v_candidate.title), '') = '' or coalesce(btrim(v_candidate.artist), '') = '' then

@@ -100,7 +100,7 @@ function fail(context: string, error: { message: string }): never {
   throw new Error(`${context}: ${error.message}`);
 }
 
-async function loadSongs(db: SupabaseClient): Promise<ExistingSong[]> {
+export async function loadSongs(db: SupabaseClient): Promise<ExistingSong[]> {
   const songs: ExistingSong[] = [];
   for (let from = 0; ; from += SONG_PAGE_SIZE) {
     const { data, error } = await db
