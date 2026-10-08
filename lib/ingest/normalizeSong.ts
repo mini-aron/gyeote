@@ -5,7 +5,8 @@ const KEY_NOISE = /[^ㄱ-ㆎ가-힣a-z0-9]/g;
 const ARTIST_SPLIT = /[()/&,]/;
 
 export function hasHangul(text: string): boolean {
-  return HANGUL.test(text);
+  // 일부 유통사 제목은 한글이 자모 분리(NFD)로 와서 완성형 범위에 안 걸린다
+  return HANGUL.test(text.normalize("NFC"));
 }
 
 export function titleKey(text: string): string {

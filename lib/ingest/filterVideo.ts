@@ -39,7 +39,7 @@ export function parseIsoDuration(duration: string): number | null {
   );
 }
 
-function blocksKorea(restriction: YoutubeVideo["regionRestriction"]): boolean {
+export function blocksKorea(restriction: YoutubeVideo["regionRestriction"]): boolean {
   if (!restriction) return false;
   if (restriction.blocked?.includes("KR")) return true;
   return restriction.allowed !== undefined && !restriction.allowed.includes("KR");
@@ -74,7 +74,7 @@ export function filterVideo(video: YoutubeVideo): FilterResult {
   if (blocksKorea(video.regionRestriction)) {
     return { pass: false, reason: "region_blocked" };
   }
-  if (!hasHangul(video.title)) return { pass: false, reason: "no_hangul" };
+  if (!hasHangul(title)) return { pass: false, reason: "no_hangul" };
 
   return { pass: true };
 }
