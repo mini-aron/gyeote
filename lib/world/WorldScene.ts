@@ -13,6 +13,9 @@ const FIREFLY_COUNT = 26;
 const METEOR_MIN_INTERVAL = 14;
 const METEOR_MAX_INTERVAL = 34;
 const METEOR_DURATION = 0.85;
+const WELL_CLEAR_RADIUS = 1.3;
+const STATION_CLEAR_RADIUS = 6;
+const BACKYARD_VIEW_HALF_WIDTH = 9;
 
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -327,6 +330,7 @@ export class WorldScene {
     this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
     window.removeEventListener("pointermove", this.handlePointerMove);
     window.removeEventListener("pointerup", this.handlePointerUp);
+    window.removeEventListener("pointercancel", this.handlePointerUp);
     window.removeEventListener("resize", this.handleResize);
     document.removeEventListener("visibilitychange", this.handleVisibilityChange);
     if (this.resizeRafId !== null) cancelAnimationFrame(this.resizeRafId);
@@ -414,6 +418,22 @@ export class WorldScene {
     return Math.abs(x) < 4.2 && z > CHURCH_Z - 7 && z < CHURCH_Z + 8.5;
   }
 
+  private inWellFootprint(x: number, z: number): boolean {
+    return Math.hypot(x, z - BACKYARD_Z) < WELL_CLEAR_RADIUS;
+  }
+
+  // 먼 나무 링(반경 34~80)이 뒤뜰 카메라 위치·시선 통로와 겹치므로 그 구역은 비운다
+  // 카메라 뒤쪽은 교회 화면에서 지붕 너머 실루엣으로 보이므로 남긴다
+  private blocksStationView(x: number, z: number): boolean {
+    const backyardCamZ = STATIONS.backyard.position[2];
+    if (Math.abs(x) < BACKYARD_VIEW_HALF_WIDTH && z > backyardCamZ - 3 && z < CHURCH_Z) {
+      return true;
+    }
+    return Object.values(STATIONS).some(
+      ({ position: [sx, , sz] }) => Math.hypot(x - sx, z - sz) < STATION_CLEAR_RADIUS,
+    );
+  }
+
   private createGrass() {
     const offsets = new Float32Array(BLADE_COUNT * 3);
     const params = new Float32Array(BLADE_COUNT * 4);
@@ -440,7 +460,7 @@ export class WorldScene {
       }
       const px = cx + Math.cos(ang) * rad;
       const pz = cz + Math.sin(ang) * rad;
-      if (this.inChurchFootprint(px, pz)) continue;
+      if (this.inChurchFootprint(px, pz) || this.inWellFootprint(px, pz)) continue;
 
       offsets[placed * 3] = px;
       offsets[placed * 3 + 1] = 0;
@@ -626,7 +646,7 @@ export class WorldScene {
       const tr = 34 + Math.random() * 46;
       const tx = Math.cos(ta) * tr;
       const tz = -12 + Math.sin(ta) * tr;
-      if (tz > 14) continue;
+      if (tz > 14 || this.blocksStationView(tx, tz)) continue;
       const th = 5 + Math.random() * 7;
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, th * 0.42, 5), treeTrunk);
       trunk.position.set(tx, th * 0.21, tz);
@@ -955,6 +975,7 @@ export class WorldScene {
     this.canvas.addEventListener("pointerdown", this.handlePointerDown);
     window.addEventListener("pointermove", this.handlePointerMove, { passive: true });
     window.addEventListener("pointerup", this.handlePointerUp);
+    window.addEventListener("pointercancel", this.handlePointerUp);
     window.addEventListener("resize", this.handleResize);
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
   }
@@ -1101,14 +1122,16 @@ export class WorldScene {
       if (tex) tex.offset.x = (this.time * (0.004 + i * 0.0025)) % 1;
     }
 
-    const positions = this.dustGeo.attributes.position.array as Float32Array;
-    for (let p = 0; p < DUST_COUNT; p++) {
-      const iy = p * 3 + 1;
-      positions[iy] += dt * (0.12 + (p % 7) * 0.02);
-      positions[p * 3] += Math.sin(this.time * 0.5 + p) * dt * 0.09;
-      if (positions[iy] > 15) positions[iy] = 0.2;
+    if (!this.reduceMotion) {
+      const positions = this.dustGeo.attributes.position.array as Float32Array;
+      for (let p = 0; p < DUST_COUNT; p++) {
+        const iy = p * 3 + 1;
+        positions[iy] += dt * (0.12 + (p % 7) * 0.02);
+        positions[p * 3] += Math.sin(this.time * 0.5 + p) * dt * 0.09;
+        if (positions[iy] > 15) positions[iy] = 0.2;
+      }
+      this.dustGeo.attributes.position.needsUpdate = true;
     }
-    this.dustGeo.attributes.position.needsUpdate = true;
 
     const fireflyPositions = this.fireflyGeo.attributes.position.array as Float32Array;
     for (let i = 0; i < FIREFLY_COUNT; i++) {
