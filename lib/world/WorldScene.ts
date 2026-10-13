@@ -764,8 +764,10 @@ export class WorldScene {
   }
 
   private buildBackyardTrees(): void {
-    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x2f2a33 });
-    const leafMat = new THREE.MeshLambertMaterial({ color: 0x24402f });
+    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x3a2e2a, flatShading: true });
+    const leafMats = [0x24402f, 0x2c4a33, 0x34543a].map(
+      (color) => new THREE.MeshLambertMaterial({ color, flatShading: true }),
+    );
     const positions: Array<[number, number]> = [
       [-4.5, BACKYARD_Z + 2.5],
       [4.5, BACKYARD_Z + 2.5],
@@ -775,31 +777,49 @@ export class WorldScene {
       [6, BACKYARD_Z - 1.2],
     ];
     for (const [tx, tz] of positions) {
-      const th = 6 + Math.random() * 2.5;
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.38, th * 0.42, 6), trunkMat);
-      trunk.position.set(tx, th * 0.21, tz);
-      this.scene.add(trunk);
+      const tree = new THREE.Group();
+      tree.position.set(tx, 0, tz);
+      tree.rotation.y = Math.random() * Math.PI * 2;
+      this.scene.add(tree);
 
-      const crownRadius = 1.8 + Math.random() * 0.6;
-      const crownY = th * 0.42 + th * 0.42;
-      const crown = new THREE.Mesh(new THREE.CylinderGeometry(0, crownRadius, th, 7), leafMat);
-      crown.position.set(tx, crownY, tz);
-      this.scene.add(crown);
+      const trunkH = 2.2 + Math.random() * 0.6;
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.32, trunkH, 6), trunkMat);
+      trunk.position.y = trunkH / 2;
+      tree.add(trunk);
 
-      // A smaller second tier on top makes the crown read as fuller/less uniform.
-      const topHeight = th * 0.4;
-      const topY = crownY + th / 2 - topHeight * 0.3;
-      const top = new THREE.Mesh(new THREE.CylinderGeometry(0, crownRadius * 0.55, topHeight, 6), leafMat);
-      top.position.set(tx, topY, tz);
-      this.scene.add(top);
+      // Two short limbs fork off near the top so the trunk doesn't read as a plain pole under the crown.
+      for (const sgn of [-1, 1]) {
+        const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.12, 1.3, 5), trunkMat);
+        limb.position.set(sgn * 0.32, trunkH - 0.2, 0);
+        limb.rotation.z = -sgn * 0.6;
+        tree.add(limb);
+      }
 
-      // A low bush at the base ties the trunk into the ground plane.
-      const bush = new THREE.Mesh(
-        new THREE.CylinderGeometry(0, 0.45 + Math.random() * 0.2, 0.55, 6),
-        leafMat,
-      );
-      bush.position.set(tx, 0.27, tz);
-      this.scene.add(bush);
+      // A cluster of faceted blobs instead of a single cone gives a rounded, broadleaf silhouette.
+      const crownR = 1.05 + Math.random() * 0.3;
+      const crownY = trunkH + crownR * 0.75;
+      const blobs: Array<[number, number, number, number]> = [
+        [0, 0, 0, 1],
+        [0.75, -0.25, 0.3, 0.72],
+        [-0.7, -0.2, -0.25, 0.75],
+        [0.15, -0.3, -0.75, 0.68],
+        [-0.1, 0.6, 0.15, 0.62],
+      ];
+      blobs.forEach(([bx, by, bz, br], i) => {
+        const blob = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(crownR * br, 1),
+          leafMats[(i + Math.floor(Math.random() * 3)) % leafMats.length],
+        );
+        blob.position.set(bx * crownR, crownY + by * crownR, bz * crownR);
+        blob.scale.y = 0.85;
+        blob.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+        tree.add(blob);
+      });
+
+      const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5 + Math.random() * 0.2, 0), leafMats[0]);
+      bush.position.set(0.35, 0.22, 0.2);
+      bush.scale.y = 0.6;
+      tree.add(bush);
     }
   }
 
