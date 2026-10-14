@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { GLASS_CARD } from "@/components/glassCard";
@@ -7,7 +8,7 @@ import { SongCard } from "@/components/church/SongCard";
 import { VerseCard } from "@/components/church/VerseCard";
 import { loadMoreSearch } from "@/lib/search/actions";
 import { buildSearchHref, MAX_LIMIT, PAGE_SIZE, type SearchFilters } from "@/lib/search/searchQuery";
-import type { SearchPage } from "@/lib/search/searchContent";
+import type { RelaxSuggestion, SearchPage } from "@/lib/search/searchContent";
 import type { SongResult, VerseResult } from "@/lib/recommend/types";
 
 function normalizedQuery(search: string): string {
@@ -32,11 +33,13 @@ export function SearchResults({
   verses,
   songs,
   bookmarkedIds,
+  suggestions,
 }: {
   filters: SearchFilters;
   verses: SearchPage<VerseResult> | null;
   songs: SearchPage<SongResult> | null;
   bookmarkedIds: string[];
+  suggestions: RelaxSuggestion[];
 }) {
   const bookmarked = useMemo(() => new Set(bookmarkedIds), [bookmarkedIds]);
   const [verseItems, setVerseItems] = useState(verses?.items ?? []);
@@ -72,10 +75,31 @@ export function SearchResults({
 
   if (count === 0) {
     return (
-      <p className={`${GLASS_CARD} px-5 py-8 text-center text-sm text-[#f4f1ff]/60`}>
-        {matchedReference ? `${matchedReference}에 ` : ""}
-        {emptyMessage(filters)} 필터를 줄여 보세요.
-      </p>
+      <div className={`${GLASS_CARD} flex flex-col items-center gap-4 px-5 py-8 text-center`}>
+        <p className="text-sm text-[#f4f1ff]/60">
+          {matchedReference ? `${matchedReference}에 ` : ""}
+          {emptyMessage(filters)}
+          {suggestions.length === 0 && " 필터를 줄여 보세요."}
+        </p>
+        {suggestions.length > 0 && (
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-xs text-[#f4f1ff]/50">이렇게 찾으면 있어요</p>
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {suggestions.map((suggestion) => (
+                <Link
+                  key={suggestion.href}
+                  href={suggestion.href}
+                  replace
+                  scroll={false}
+                  className="rounded-full border border-[#c9bcff]/40 bg-[#c9bcff]/15 px-3 py-1.5 text-xs text-[#f4f1ff]"
+                >
+                  {suggestion.label} · {suggestion.count}개
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 

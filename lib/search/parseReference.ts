@@ -4,6 +4,7 @@ export interface ParsedReference {
   verse?: number;
 }
 
+export const PSALMS_BOOK_ID = 19;
 const MAX_CHAPTER = 150;
 const MAX_VERSE = 176;
 
