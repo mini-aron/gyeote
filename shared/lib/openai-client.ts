@@ -5,9 +5,10 @@ const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 // nano는 위기 신호 판별·한국어 톤 준수가 약해서 한 단계 위로
 const OPENAI_MODEL = "gpt-5-mini";
 
-export async function callOpenAiChat(messages: ChatMessage[], apiKey: string): Promise<string> {
+export async function callOpenAiChat(messages: ChatMessage[], apiKey: string, signal?: AbortSignal): Promise<string> {
   const response = await fetch(OPENAI_URL, {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,

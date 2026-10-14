@@ -31,6 +31,15 @@ describe("parseSearchFilters", () => {
   });
 });
 
+describe("matchAny", () => {
+  it("match=any만 켜지고 URL 왕복이 유지된다", () => {
+    expect(parseSearchFilters({ match: "all" }).matchAny).toBe(false);
+    const filters = parseSearchFilters({ match: "any", theme: ["00000000-0000-4000-8000-000000000001"] });
+    expect(filters.matchAny).toBe(true);
+    expect(roundTrip(buildSearchHref(filters))).toEqual(filters);
+  });
+});
+
 describe("generateSeed", () => {
   it("parseSearchFilters가 받아들이는 형식이다", () => {
     const seed = generateSeed();
