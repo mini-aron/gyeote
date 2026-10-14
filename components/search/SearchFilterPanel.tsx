@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { GLASS_CARD } from "@/components/glassCard";
-import { buildSearchHref, MAX_QUERY_LENGTH, type SearchFilters } from "@/lib/search/searchQuery";
+import { activeFilterChips } from "@/lib/search/activeFilters";
+import { addRecentSearch, clearRecentSearches, readRecentSearches } from "@/lib/search/recentSearches";
+import { buildSearchHref, MAX_QUERY_LENGTH, normalizeQuery, type SearchFilters } from "@/lib/search/searchQuery";
 import type { SearchOptions, TagOption } from "@/lib/search/types";
 
 type TagKey = "theme" | "situation" | "mood";
@@ -87,6 +89,9 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState(filters);
   const draftRef = useRef(filters);
+  const [expanded, setExpanded] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
+  const [inputEmpty, setInputEmpty] = useState(!filters.q);
   const targetHref = useRef(buildSearchHref({ ...filters, limit: undefined }));
 
   const push = (next: SearchFilters) => {
@@ -97,13 +102,22 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
   };
 
   // 서버가 내려준 값이 바뀌면(뒤로가기·전환 완료) 초안을 맞추되, 입력 대기 중이거나 이동 중이면 건드리지 않는다.
+  // 대기 중인데 우리가 보낸 적 없는 주소로 바뀌었으면(도움말 링크 등) 그쪽이 이기도록 대기를 취소한다.
   useEffect(() => {
-    if (isScheduled() || pending) return;
+    if (pending) return;
+    if (isScheduled()) {
+      if (buildSearchHref({ ...filters, limit: undefined }) === targetHref.current) return;
+      cancel();
+    }
     targetHref.current = buildSearchHref({ ...filters, limit: undefined });
     draftRef.current = filters;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 입력 대기 여부가 ref라 렌더 중 비교할 수 없다
     setDraft(filters);
-  }, [filters, pending, isScheduled]);
+  }, [filters, pending, isScheduled, cancel]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage는 하이드레이션 불일치를 피하려고 마운트 뒤에 읽는다
+    setRecent(readRecentSearches());
+  }, []);
 
   // iOS 스와이프 뒤로가기가 대기 중인 replace에 덮이지 않게 한다.
   useEffect(() => {
@@ -129,6 +143,13 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
     push(merged);
   };
 
+  const submitQuery = (raw: string) => {
+    const query = normalizeQuery(raw);
+    if (query) setRecent(addRecentSearch(query));
+    setInputEmpty(!query);
+    goNow({ q: query });
+  };
+
   const toggleTag = (key: TagKey, id: string) => {
     const current = draftRef.current[key];
     go({ [key]: current.includes(id) ? current.filter((value) => value !== id) : [...current, id] });
@@ -140,6 +161,7 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
     ? booksOfTestament.filter((book) => book.category === draft.category)
     : booksOfTestament;
 
+  const chips = activeFilterChips(draft, options);
   const hasFilter =
     draft.theme.length + draft.situation.length + draft.mood.length > 0 ||
     Boolean(draft.testament || draft.q || draft.bookmarked || draft.matchAny);
@@ -149,7 +171,7 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
       {draft.matchAny && draft.theme.length + draft.situation.length + draft.mood.length > 0 && (
         <div className="flex items-start justify-between gap-3 rounded-xl border border-[#c9bcff]/30 bg-[#c9bcff]/10 px-3 py-2">
           <p className="text-xs leading-relaxed text-[#f4f1ff]/80">
-            마음에 맞는 주제가 많이 겹치는 순으로 보여드려요. 아래 태그를 바꿔도 같은 방식으로 찾아요.
+            마음에 맞는 주제가 많이 겹치는 순으로 보여드려요. 태그를 바꿔도 같은 방식으로 찾아요.
           </p>
           <button
             type="button"
@@ -161,20 +183,12 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
         </div>
       )}
 
-      <FilterGroup label="북마크">
-        <ChipRow>
-          <Chip selected={draft.bookmarked} onClick={() => go({ bookmarked: !draft.bookmarked })}>
-            북마크한 것만
-          </Chip>
-        </ChipRow>
-      </FilterGroup>
-
       <form
         key={filters.q}
         onSubmit={(event) => {
           event.preventDefault();
           const value = new FormData(event.currentTarget).get("q");
-          goNow({ q: typeof value === "string" ? value.trim() : "" });
+          submitQuery(typeof value === "string" ? value : "");
         }}
         className="flex gap-2"
       >
@@ -182,6 +196,7 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
           name="q"
           type="search"
           defaultValue={filters.q}
+          onChange={(event) => setInputEmpty(event.currentTarget.value.trim() === "")}
           maxLength={MAX_QUERY_LENGTH}
           placeholder={filters.type === "verse" ? "단어나 구절 (예: 시편 23, 두려워)" : "곡명, 아티스트, 가사 단어"}
           className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-sm text-[#f4f1ff] outline-none placeholder:text-[#f4f1ff]/40 focus:border-white/30"
@@ -194,99 +209,153 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
         </button>
       </form>
 
-      {filters.type === "verse" && (
-        <FilterGroup label="성경 분류">
+      {inputEmpty && recent.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-[#f4f1ff]/50">최근</span>
+          {recent.map((query) => (
+            <Chip key={query} selected={false} onClick={() => submitQuery(query)}>
+              {query}
+            </Chip>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              clearRecentSearches();
+              setRecent([]);
+            }}
+            aria-label="최근 검색어 지우기"
+            className="px-1 py-1.5 text-xs text-[#f4f1ff]/45 underline underline-offset-2"
+          >
+            지우기
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls="search-filters"
+          onClick={() => setExpanded((value) => !value)}
+          className="rounded-full border border-white/15 bg-white/[0.1] px-3 py-1.5 text-xs text-[#f4f1ff]"
+        >
+          필터{chips.length > 0 ? ` · ${chips.length}` : ""} <span aria-hidden="true">{expanded ? "▴" : "▾"}</span>
+        </button>
+        {chips.map((chip) => (
+          <button
+            key={chip.key}
+            type="button"
+            onClick={() => goNow(chip.remove)}
+            aria-label={`${chip.label} 조건 빼기`}
+            className="rounded-full border border-[#c9bcff]/60 bg-[#c9bcff]/25 px-3 py-1.5 text-xs text-[#f4f1ff]"
+          >
+            {chip.label} ✕
+          </button>
+        ))}
+        {hasFilter && (
+          <button
+            type="button"
+            onClick={() => {
+              goNow({ theme: [], situation: [], mood: [], testament: undefined, category: undefined, book: undefined, chapter: undefined, q: "", bookmarked: false, matchAny: false });
+            }}
+            className="px-1 py-1.5 text-xs text-[#c9bcff] underline underline-offset-2"
+          >
+            초기화
+          </button>
+        )}
+      </div>
+
+      <div id="search-filters" hidden={!expanded} className="flex flex-col gap-4">
+        <FilterGroup label="북마크">
           <ChipRow>
-            {TESTAMENTS.map((item) => (
-              <Chip
-                key={item.key}
-                selected={draft.testament === item.key}
-                onClick={() =>
-                  go({
-                    testament: draft.testament === item.key ? undefined : item.key,
-                    category: undefined,
-                    book: undefined,
-                    chapter: undefined,
-                  })
-                }
-              >
-                {item.label}
-              </Chip>
-            ))}
+            <Chip selected={draft.bookmarked} onClick={() => go({ bookmarked: !draft.bookmarked })}>
+              북마크한 것만
+            </Chip>
           </ChipRow>
-          {draft.testament && (
+        </FilterGroup>
+
+        {filters.type === "verse" && (
+          <FilterGroup label="성경 분류">
             <ChipRow>
-              {categories.map((category) => (
+              {TESTAMENTS.map((item) => (
                 <Chip
-                  key={category}
-                  selected={draft.category === category}
+                  key={item.key}
+                  selected={draft.testament === item.key}
                   onClick={() =>
                     go({
-                      category: draft.category === category ? undefined : category,
+                      testament: draft.testament === item.key ? undefined : item.key,
+                      category: undefined,
                       book: undefined,
                       chapter: undefined,
                     })
                   }
                 >
-                  {category}
+                  {item.label}
                 </Chip>
               ))}
             </ChipRow>
-          )}
-          {draft.testament && (
-            <ChipRow>
-              {visibleBooks.map((book) => (
-                <Chip
-                  key={book.id}
-                  selected={draft.book === book.id}
-                  disabled={!book.hasVerses}
-                  onClick={() =>
-                    go({ book: draft.book === book.id ? undefined : book.id, chapter: undefined })
-                  }
-                >
-                  {book.name}
-                </Chip>
-              ))}
-            </ChipRow>
-          )}
-          {draft.book && draft.book === filters.book && options.chapters.length > 0 && (
-            <ChipRow>
-              {options.chapters.map((chapter) => (
-                <Chip
-                  key={chapter}
-                  selected={draft.chapter === chapter}
-                  onClick={() => go({ chapter: draft.chapter === chapter ? undefined : chapter })}
-                >
-                  {chapter}장
-                </Chip>
-              ))}
-            </ChipRow>
-          )}
-        </FilterGroup>
-      )}
+            {draft.testament && (
+              <ChipRow>
+                {categories.map((category) => (
+                  <Chip
+                    key={category}
+                    selected={draft.category === category}
+                    onClick={() =>
+                      go({
+                        category: draft.category === category ? undefined : category,
+                        book: undefined,
+                        chapter: undefined,
+                      })
+                    }
+                  >
+                    {category}
+                  </Chip>
+                ))}
+              </ChipRow>
+            )}
+            {draft.testament && (
+              <ChipRow>
+                {visibleBooks.map((book) => (
+                  <Chip
+                    key={book.id}
+                    selected={draft.book === book.id}
+                    disabled={!book.hasVerses}
+                    onClick={() =>
+                      go({ book: draft.book === book.id ? undefined : book.id, chapter: undefined })
+                    }
+                  >
+                    {book.name}
+                  </Chip>
+                ))}
+              </ChipRow>
+            )}
+            {draft.book && draft.book === filters.book && options.chapters.length > 0 && (
+              <ChipRow>
+                {options.chapters.map((chapter) => (
+                  <Chip
+                    key={chapter}
+                    selected={draft.chapter === chapter}
+                    onClick={() => go({ chapter: draft.chapter === chapter ? undefined : chapter })}
+                  >
+                    {chapter}장
+                  </Chip>
+                ))}
+              </ChipRow>
+            )}
+          </FilterGroup>
+        )}
 
-      <TagGroup label="주제" tags={options.themes} selected={draft.theme} onToggle={(id) => toggleTag("theme", id)} />
-      <TagGroup
-        label="상황"
-        tags={options.situations}
-        selected={draft.situation}
-        onToggle={(id) => toggleTag("situation", id)}
-      />
-      {filters.type === "song" && (
-        <TagGroup label="분위기" tags={options.moods} selected={draft.mood} onToggle={(id) => toggleTag("mood", id)} />
-      )}
-
-      {hasFilter && (
-        <button
-          type="button"
-          onClick={() => {
-            goNow({ theme: [], situation: [], mood: [], testament: undefined, category: undefined, book: undefined, chapter: undefined, q: "", bookmarked: false, matchAny: false });
-          }}
-          className="self-start text-xs text-[#c9bcff] underline underline-offset-2"
-        >
-          필터 초기화
-        </button>
-      )}
+        <TagGroup label="주제" tags={options.themes} selected={draft.theme} onToggle={(id) => toggleTag("theme", id)} />
+        <TagGroup
+          label="상황"
+          tags={options.situations}
+          selected={draft.situation}
+          onToggle={(id) => toggleTag("situation", id)}
+        />
+        {filters.type === "song" && (
+          <TagGroup label="분위기" tags={options.moods} selected={draft.mood} onToggle={(id) => toggleTag("mood", id)} />
+        )}
+      </div>
     </section>
   );
 }
