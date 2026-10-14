@@ -70,6 +70,7 @@ export async function searchVerses(
     p_seed: shuffle ? (filters.seed ?? null) : null,
     p_limit: filters.limit,
     p_offset: offset,
+    p_match_any: filters.matchAny,
   });
   if (error) throw error;
 
@@ -103,6 +104,7 @@ export async function searchSongs(
     p_seed: filters.q ? null : (filters.seed ?? null),
     p_limit: filters.limit,
     p_offset: offset,
+    p_match_any: filters.matchAny,
   });
   if (error) throw error;
 

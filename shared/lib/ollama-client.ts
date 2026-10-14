@@ -17,7 +17,7 @@ export interface ChatMessage {
 }
 
 // OpenAI 호환 API는 keep_alive를 무시할 수 있어 네이티브 /api/chat 사용
-export async function callOllamaChat(messages: ChatMessage[]): Promise<string> {
+export async function callOllamaChat(messages: ChatMessage[], signal?: AbortSignal): Promise<string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (CF_ACCESS_CLIENT_ID && CF_ACCESS_CLIENT_SECRET) {
     headers["CF-Access-Client-Id"] = CF_ACCESS_CLIENT_ID;
@@ -26,6 +26,7 @@ export async function callOllamaChat(messages: ChatMessage[]): Promise<string> {
 
   const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
     method: "POST",
+    signal,
     headers,
     body: JSON.stringify({
       model: OLLAMA_MODEL,
