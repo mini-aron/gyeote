@@ -13,7 +13,6 @@ export const STATIONS: Record<StationKey, CameraStation> = {
   // 교회 — the original front-of-church vantage point.
   church: { position: [0, 1.75, 7], lookAt: [0, 3.6, -14] },
   // 뒤뜰 — behind the church, facing back toward its rear wall with the well/trees in front.
-  // Kept roughly as far from the well (~17 units) as the church station is from
-  // the church front, so the well doesn't fill the whole frame.
-  backyard: { position: [0, 2.1, -46], lookAt: [0, 4, -20] },
+  // ~14 units from the well — closer than this, the well fills a portrait mobile frame.
+  backyard: { position: [0, 2.0, -43], lookAt: [0, 4, -20] },
 };

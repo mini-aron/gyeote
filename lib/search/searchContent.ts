@@ -1,37 +1,28 @@
 import "server-only";
 import { supabaseAdmin } from "@/shared/lib/supabase-client";
 import { getBibleBooks } from "@/lib/catalog/catalogCache";
-import { fetchAllRows } from "@/lib/search/fetchAllRows";
+import { parseReference, type ParsedReference } from "@/lib/search/parseReference";
 import type { SearchFilters } from "@/lib/search/searchQuery";
 import type { SongResult, VerseResult } from "@/lib/recommend/types";
-
-const FETCH_CHUNK = 50;
 
 export interface SearchPage<T> {
   items: T[];
   total: number;
+  matchedReference?: string;
 }
 
-async function idsMatchingTags(kind: "verse" | "song", filters: SearchFilters): Promise<Set<string> | null> {
-  const groups: { table: string; column: string; ids: string[] }[] = [
-    { table: `${kind}_themes`, column: "theme_id", ids: filters.theme },
-    { table: `${kind}_situations`, column: "situation_id", ids: filters.situation },
-  ];
-  if (kind === "song") groups.push({ table: "song_moods", column: "mood_id", ids: filters.mood });
+// search_* 함수에서 빈 배열은 "아무것도 매칭 안 함"이라, 선택 안 한 태그는 null로 넘겨야 한다.
+function tagsOrNull(ids: string[]): string[] | null {
+  return ids.length > 0 ? ids : null;
+}
 
-  const matchedSets = await Promise.all(
-    groups
-      .filter((group) => group.ids.length > 0)
-      .map(async (group) => {
-        const rows = await fetchAllRows<Record<string, string>>((from, to) =>
-          supabaseAdmin.from(group.table).select(`${kind}_id`).in(group.column, group.ids).order(`${kind}_id`).order(group.column).range(from, to),
-        );
-        return new Set(rows.map((row) => row[`${kind}_id`]));
-      }),
-  );
-  if (matchedSets.length === 0) return null;
-  const [first, ...rest] = matchedSets;
-  return new Set([...first].filter((id) => rest.every((set) => set.has(id))));
+function onlyIds(filters: SearchFilters, bookmarkedIds: string[]): string[] | null {
+  return filters.bookmarked ? bookmarkedIds : null;
+}
+
+// count(*) over ()는 결과 행이 없으면 total도 없어서, offset이 끝을 넘은 경우 지금까지 본 개수로 수렴시킨다.
+function totalOf(rows: { total: number | string }[], offset: number): number {
+  return rows.length > 0 ? Number(rows[0].total) : offset;
 }
 
 async function resolveBookIds(filters: SearchFilters): Promise<number[] | null> {
@@ -47,21 +38,12 @@ async function resolveBookIds(filters: SearchFilters): Promise<number[] | null> 
     .map((book) => book.id);
 }
 
-async function fetchByIds<T extends { id: string }>(
-  table: "verses" | "songs",
-  columns: string,
-  ids: string[],
-): Promise<Map<string, T>> {
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += FETCH_CHUNK) chunks.push(ids.slice(i, i + FETCH_CHUNK));
-  const results = await Promise.all(
-    chunks.map(async (chunk) => {
-      const { data, error } = await supabaseAdmin.from(table).select(columns).in("id", chunk);
-      if (error) throw error;
-      return (data ?? []) as unknown as T[];
-    }),
-  );
-  return new Map(results.flat().map((row) => [row.id, row]));
+const PSALMS_BOOK_ID = 19;
+
+function describeReference(ref: ParsedReference, bookName: string): string {
+  if (ref.chapter === undefined) return bookName;
+  if (ref.verse !== undefined) return `${bookName} ${ref.chapter}:${ref.verse}`;
+  return `${bookName} ${ref.chapter}${ref.bookId === PSALMS_BOOK_ID ? "편" : "장"}`;
 }
 
 // bookmarkedIds는 회원별 데이터라 호출자가 요청 단위로 넘긴다 (카탈로그 캐시에 섞지 않는다).
@@ -70,34 +52,42 @@ export async function searchVerses(
   offset = 0,
   bookmarkedIds: string[] = [],
 ): Promise<SearchPage<VerseResult>> {
-  if (filters.bookmarked && bookmarkedIds.length === 0) return { items: [], total: 0 };
-  const [bookIds, tagIds] = await Promise.all([resolveBookIds(filters), idsMatchingTags("verse", filters)]);
-  if (bookIds && bookIds.length === 0) return { items: [], total: 0 };
+  const books = filters.q ? await getBibleBooks() : [];
+  const ref = filters.q ? parseReference(filters.q, books) : null;
+  // 참조로 해석되면 패널의 성경 분류를 대체한다 — 교집합이면 "창세기 선택 + 시편 23 입력"이 0건이 된다.
+  const bookIds = ref ? [ref.bookId] : await resolveBookIds(filters);
+  const chapter = ref ? ref.chapter : filters.chapter;
+  const shuffle = !filters.q && !filters.book && !filters.chapter;
 
-  const candidates = await fetchAllRows<{ id: string }>((from, to) => {
-    let query = supabaseAdmin.from("verses").select("id").eq("is_reviewed", true).eq("is_active", true);
-    if (bookIds) query = query.in("book_id", bookIds);
-    if (filters.chapter) query = query.eq("chapter", filters.chapter);
-    return query.order("book_id").order("chapter").order("verse_start").order("id").range(from, to);
+  const { data, error } = await supabaseAdmin.rpc("search_verses", {
+    p_q: ref ? null : filters.q || null,
+    p_book_ids: bookIds,
+    p_chapter: chapter ?? null,
+    p_verse: ref?.verse ?? null,
+    p_theme_ids: tagsOrNull(filters.theme),
+    p_situation_ids: tagsOrNull(filters.situation),
+    p_only_ids: onlyIds(filters, bookmarkedIds),
+    p_seed: shuffle ? (filters.seed ?? null) : null,
+    p_limit: filters.limit,
+    p_offset: offset,
+    p_match_any: filters.matchAny,
   });
+  if (error) throw error;
 
-  const bookmarkedSet = filters.bookmarked ? new Set(bookmarkedIds) : null;
-  const matched = candidates
-    .map((row) => row.id)
-    .filter((id) => (!tagIds || tagIds.has(id)) && (!bookmarkedSet || bookmarkedSet.has(id)));
-  const pageIds = matched.slice(offset, offset + filters.limit);
-  const rows = await fetchByIds<VerseResult>(
-    "verses",
-    "id, reference, body, translation, meaning, application",
-    pageIds,
-  );
-
-  return { items: pageIds.flatMap((id) => rows.get(id) ?? []), total: matched.length };
-}
-
-// PostgREST or-필터 구분자와 ilike 와일드카드가 입력에 섞이면 필터 문법이 깨지므로 공백으로 치환한다.
-function sanitizeKeyword(keyword: string): string {
-  return keyword.replace(/[%_*\\,()"]/g, " ").replace(/\s+/g, " ").trim();
+  const rows = (data ?? []) as (VerseResult & { total: number | string })[];
+  const bookName = ref && books.find((book) => book.id === ref.bookId)?.name;
+  return {
+    items: rows.map(({ id, reference, body, translation, meaning, application }) => ({
+      id,
+      reference,
+      body,
+      translation,
+      meaning,
+      application,
+    })),
+    total: totalOf(rows, offset),
+    ...(ref && bookName ? { matchedReference: describeReference(ref, bookName) } : {}),
+  };
 }
 
 export async function searchSongs(
@@ -105,36 +95,35 @@ export async function searchSongs(
   offset = 0,
   bookmarkedIds: string[] = [],
 ): Promise<SearchPage<SongResult>> {
-  if (filters.bookmarked && bookmarkedIds.length === 0) return { items: [], total: 0 };
-  const keyword = sanitizeKeyword(filters.q);
+  const { data, error } = await supabaseAdmin.rpc("search_songs", {
+    p_q: filters.q || null,
+    p_theme_ids: tagsOrNull(filters.theme),
+    p_situation_ids: tagsOrNull(filters.situation),
+    p_mood_ids: tagsOrNull(filters.mood),
+    p_only_ids: onlyIds(filters, bookmarkedIds),
+    p_seed: filters.q ? null : (filters.seed ?? null),
+    p_limit: filters.limit,
+    p_offset: offset,
+    p_match_any: filters.matchAny,
+  });
+  if (error) throw error;
 
-  const [tagIds, candidates] = await Promise.all([
-    idsMatchingTags("song", filters),
-    fetchAllRows<{ id: string }>((from, to) => {
-      let query = supabaseAdmin.from("songs").select("id").eq("is_reviewed", true).eq("is_active", true);
-      if (keyword) query = query.or(`title.ilike."%${keyword}%",artist.ilike."%${keyword}%"`);
-      return query.order("title").order("id").range(from, to);
-    }),
-  ]);
-
-  const bookmarkedSet = filters.bookmarked ? new Set(bookmarkedIds) : null;
-  const matched = candidates
-    .map((row) => row.id)
-    .filter((id) => (!tagIds || tagIds.has(id)) && (!bookmarkedSet || bookmarkedSet.has(id)));
-  const pageIds = matched.slice(offset, offset + filters.limit);
-  const rows = await fetchByIds<{
+  const rows = (data ?? []) as {
     id: string;
     title: string;
     artist: string;
     listen_url: string | null;
     summary: string | null;
-  }>("songs", "id, title, artist, listen_url, summary", pageIds);
-
-  const items = pageIds.flatMap((id) => {
-    const row = rows.get(id);
-    return row
-      ? [{ id: row.id, title: row.title, artist: row.artist, listenUrl: row.listen_url, summary: row.summary }]
-      : [];
-  });
-  return { items, total: matched.length };
+    total: number | string;
+  }[];
+  return {
+    items: rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      artist: row.artist,
+      listenUrl: row.listen_url,
+      summary: row.summary,
+    })),
+    total: totalOf(rows, offset),
+  };
 }

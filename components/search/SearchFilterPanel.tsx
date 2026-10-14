@@ -142,10 +142,25 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
 
   const hasFilter =
     draft.theme.length + draft.situation.length + draft.mood.length > 0 ||
-    Boolean(draft.testament || draft.q || draft.bookmarked);
+    Boolean(draft.testament || draft.q || draft.bookmarked || draft.matchAny);
 
   return (
     <section className={`${GLASS_CARD} flex flex-col gap-4 px-4 py-4 transition-opacity ${pending ? "opacity-70" : ""}`}>
+      {draft.matchAny && draft.theme.length + draft.situation.length + draft.mood.length > 0 && (
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-[#c9bcff]/30 bg-[#c9bcff]/10 px-3 py-2">
+          <p className="text-xs leading-relaxed text-[#f4f1ff]/80">
+            마음에 맞는 주제가 많이 겹치는 순으로 보여드려요. 아래 태그를 바꿔도 같은 방식으로 찾아요.
+          </p>
+          <button
+            type="button"
+            onClick={() => goNow({ matchAny: false })}
+            className="shrink-0 text-xs text-[#c9bcff] underline underline-offset-2"
+          >
+            모두 맞는 것만
+          </button>
+        </div>
+      )}
+
       <FilterGroup label="북마크">
         <ChipRow>
           <Chip selected={draft.bookmarked} onClick={() => go({ bookmarked: !draft.bookmarked })}>
@@ -154,32 +169,30 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
         </ChipRow>
       </FilterGroup>
 
-      {filters.type === "song" && (
-        <form
-          key={filters.q}
-          onSubmit={(event) => {
-            event.preventDefault();
-            const value = new FormData(event.currentTarget).get("q");
-            goNow({ q: typeof value === "string" ? value.trim() : "" });
-          }}
-          className="flex gap-2"
+      <form
+        key={filters.q}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const value = new FormData(event.currentTarget).get("q");
+          goNow({ q: typeof value === "string" ? value.trim() : "" });
+        }}
+        className="flex gap-2"
+      >
+        <input
+          name="q"
+          type="search"
+          defaultValue={filters.q}
+          maxLength={MAX_QUERY_LENGTH}
+          placeholder={filters.type === "verse" ? "단어나 구절 (예: 시편 23, 두려워)" : "곡명, 아티스트, 가사 단어"}
+          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-sm text-[#f4f1ff] outline-none placeholder:text-[#f4f1ff]/40 focus:border-white/30"
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-xl border border-white/10 bg-white/15 px-3 py-2 text-sm text-[#f4f1ff]"
         >
-          <input
-            name="q"
-            type="search"
-            defaultValue={filters.q}
-            maxLength={MAX_QUERY_LENGTH}
-            placeholder="곡명이나 아티스트"
-            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-sm text-[#f4f1ff] outline-none placeholder:text-[#f4f1ff]/40 focus:border-white/30"
-          />
-          <button
-            type="submit"
-            className="shrink-0 rounded-xl border border-white/10 bg-white/15 px-3 py-2 text-sm text-[#f4f1ff]"
-          >
-            검색
-          </button>
-        </form>
-      )}
+          검색
+        </button>
+      </form>
 
       {filters.type === "verse" && (
         <FilterGroup label="성경 분류">
@@ -267,7 +280,7 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
         <button
           type="button"
           onClick={() => {
-            goNow({ theme: [], situation: [], mood: [], testament: undefined, category: undefined, book: undefined, chapter: undefined, q: "", bookmarked: false });
+            goNow({ theme: [], situation: [], mood: [], testament: undefined, category: undefined, book: undefined, chapter: undefined, q: "", bookmarked: false, matchAny: false });
           }}
           className="self-start text-xs text-[#c9bcff] underline underline-offset-2"
         >
