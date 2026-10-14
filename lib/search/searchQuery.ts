@@ -14,6 +14,7 @@ export interface SearchFilters {
   chapter?: number;
   q: string;
   bookmarked: boolean;
+  seed?: string;
   limit: number;
 }
 
@@ -21,6 +22,7 @@ export const PAGE_SIZE = 50;
 export const MAX_LIMIT = 500;
 export const MAX_QUERY_LENGTH = 50;
 
+const SEED_PATTERN = /^[a-z0-9]{6,12}$/;
 
 type RawParams = Record<string, string | string[] | undefined>;
 
@@ -43,6 +45,7 @@ export function parseSearchFilters(raw: RawParams): SearchFilters {
   const isVerse = type === "verse";
   const testament = many(raw.testament)[0];
   const category = many(raw.category)[0];
+  const seed = many(raw.seed)[0];
   const validTestament = isVerse && (testament === "old" || testament === "new");
   const book = isVerse ? int(raw.book, 1, 66) : undefined;
   return {
@@ -54,8 +57,9 @@ export function parseSearchFilters(raw: RawParams): SearchFilters {
     category: validTestament && category && category.length <= 20 ? category : undefined,
     book,
     chapter: book ? int(raw.chapter, 1, 200) : undefined,
-    q: isVerse ? "" : (many(raw.q)[0] ?? "").trim().slice(0, MAX_QUERY_LENGTH),
+    q: (many(raw.q)[0] ?? "").normalize("NFC").replace(/\s+/g, " ").trim().slice(0, MAX_QUERY_LENGTH).trim(),
     bookmarked: many(raw.bookmarked)[0] === "1",
+    seed: SEED_PATTERN.test(seed ?? "") ? seed : undefined,
     limit: int(raw.limit, PAGE_SIZE, MAX_LIMIT) ?? PAGE_SIZE,
   };
 }
@@ -72,7 +76,14 @@ export function buildSearchHref(filters: Partial<SearchFilters> & { type: Search
   if (filters.chapter) params.set("chapter", String(filters.chapter));
   if (filters.q) params.set("q", filters.q);
   if (filters.bookmarked) params.set("bookmarked", "1");
+  if (filters.seed) params.set("seed", filters.seed);
   if (filters.limit && filters.limit > PAGE_SIZE) params.set("limit", String(filters.limit));
   const query = params.toString();
   return query ? `/search?${query}` : "/search";
+}
+
+// 기본 목록의 랜덤 순서를 "더 보기"·새로고침에서도 유지하려고 URL에 싣는 시드
+export function generateSeed(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, (byte) => (byte % 36).toString(36)).join("");
 }

@@ -154,32 +154,30 @@ function FilterBody({ filters, options, schedule, cancel, isScheduled }: FilterB
         </ChipRow>
       </FilterGroup>
 
-      {filters.type === "song" && (
-        <form
-          key={filters.q}
-          onSubmit={(event) => {
-            event.preventDefault();
-            const value = new FormData(event.currentTarget).get("q");
-            goNow({ q: typeof value === "string" ? value.trim() : "" });
-          }}
-          className="flex gap-2"
+      <form
+        key={filters.q}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const value = new FormData(event.currentTarget).get("q");
+          goNow({ q: typeof value === "string" ? value.trim() : "" });
+        }}
+        className="flex gap-2"
+      >
+        <input
+          name="q"
+          type="search"
+          defaultValue={filters.q}
+          maxLength={MAX_QUERY_LENGTH}
+          placeholder={filters.type === "verse" ? "단어나 구절 (예: 시편 23, 두려워)" : "곡명, 아티스트, 가사 단어"}
+          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-sm text-[#f4f1ff] outline-none placeholder:text-[#f4f1ff]/40 focus:border-white/30"
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-xl border border-white/10 bg-white/15 px-3 py-2 text-sm text-[#f4f1ff]"
         >
-          <input
-            name="q"
-            type="search"
-            defaultValue={filters.q}
-            maxLength={MAX_QUERY_LENGTH}
-            placeholder="곡명이나 아티스트"
-            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-sm text-[#f4f1ff] outline-none placeholder:text-[#f4f1ff]/40 focus:border-white/30"
-          />
-          <button
-            type="submit"
-            className="shrink-0 rounded-xl border border-white/10 bg-white/15 px-3 py-2 text-sm text-[#f4f1ff]"
-          >
-            검색
-          </button>
-        </form>
-      )}
+          검색
+        </button>
+      </form>
 
       {filters.type === "verse" && (
         <FilterGroup label="성경 분류">

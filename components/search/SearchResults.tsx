@@ -42,6 +42,7 @@ export function SearchResults({
   const [verseItems, setVerseItems] = useState(verses?.items ?? []);
   const [songItems, setSongItems] = useState(songs?.items ?? []);
   const [total, setTotal] = useState((verses ?? songs)?.total ?? 0);
+  const matchedReference = verses?.matchedReference;
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
   const [announcement, setAnnouncement] = useState("");
@@ -57,11 +58,22 @@ export function SearchResults({
     };
   }, []);
 
+  // 하이드레이션 커밋에서는 자식 effect가 Next 라우터의 replaceState 연동보다 먼저 돌 수 있어 한 틱 미룬다.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (window.location.pathname !== "/search") return;
+      if (new URLSearchParams(window.location.search).get("seed") === filters.seed) return;
+      window.history.replaceState(null, "", buildSearchHref(filters));
+    }, 0);
+    return () => clearTimeout(id);
+  }, [filters]);
+
   const count = verseItems.length + songItems.length;
 
   if (count === 0) {
     return (
       <p className={`${GLASS_CARD} px-5 py-8 text-center text-sm text-[#f4f1ff]/60`}>
+        {matchedReference ? `${matchedReference}에 ` : ""}
         {emptyMessage(filters)} 필터를 줄여 보세요.
       </p>
     );
@@ -116,7 +128,7 @@ export function SearchResults({
         aria-live="polite"
         className="px-1 text-xs text-[#f4f1ff]/55 outline-none"
       >
-        총 {total}개<span className="sr-only"> {announcement}</span>
+        {matchedReference && `'${matchedReference}' 구절로 찾았어요 · `}총 {total}개<span className="sr-only"> {announcement}</span>
       </p>
       {verseItems.map((verse) => (
         <VerseCard key={verse.id} verse={verse} bookmarked={bookmarked.has(verse.id)} />

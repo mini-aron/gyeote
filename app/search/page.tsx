@@ -1,5 +1,5 @@
 import { requireMember } from "@/lib/auth/requireMember";
-import { buildSearchHref, parseSearchFilters } from "@/lib/search/searchQuery";
+import { buildSearchHref, generateSeed, parseSearchFilters } from "@/lib/search/searchQuery";
 import { getSearchOptions } from "@/lib/search/getSearchOptions";
 import { searchSongs, searchVerses } from "@/lib/search/searchContent";
 import { readBookmarkedIds } from "@/lib/bookmarks/bookmarkStore";
@@ -12,7 +12,9 @@ export default async function Page({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await requireMember("search");
-  const filters = parseSearchFilters(await searchParams);
+  const parsed = parseSearchFilters(await searchParams);
+  // redirect하면 진입마다 왕복이 두 번이라, 여기서 만든 시드로 바로 렌더하고 URL 반영은 SearchResults가 한다.
+  const filters = parsed.seed ? parsed : { ...parsed, seed: generateSeed() };
   const bookmarkedPromise = readBookmarkedIds(filters.type);
   const searchPromise = (async () => {
     const ids = filters.bookmarked ? ((await bookmarkedPromise) ?? []) : [];
