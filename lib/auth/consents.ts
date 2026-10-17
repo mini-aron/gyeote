@@ -8,6 +8,7 @@ export interface ConsentItem {
   label: string;
   summary: string;
   body: string[];
+  fullTextHref?: "/terms" | "/privacy";
 }
 
 // 문구는 전문가 검토 전 임시안
@@ -16,6 +17,7 @@ export const CONSENT_ITEMS: readonly ConsentItem[] = [
     type: "terms",
     required: true,
     label: "이용약관 동의",
+    fullTextHref: "/terms",
     summary: "곁에 서비스 이용 조건에 동의해요",
     body: [
       "곁에는 짧은 대화를 바탕으로 성경 말씀 1구절과 찬양 1곡을 추천하는 서비스예요.",
@@ -27,6 +29,7 @@ export const CONSENT_ITEMS: readonly ConsentItem[] = [
     type: "privacy",
     required: true,
     label: "개인정보 수집·이용 동의",
+    fullTextHref: "/privacy",
     summary: "카카오 닉네임·이메일·프로필 사진과 이용 기록을 수집해요",
     body: [
       "수집 항목: 카카오 닉네임, 카카오계정 이메일, 프로필 사진, 서비스 이용 기록(추천 받은 말씀·찬양, 북마크, 일정 등).",
@@ -40,6 +43,7 @@ export const CONSENT_ITEMS: readonly ConsentItem[] = [
     type: "sensitive",
     required: true,
     label: "민감정보 수집·이용 동의",
+    fullTextHref: "/privacy",
     summary: "신앙과 관련된 대화 내용을 저장하고 보여드려요",
     body: [
       "상담 기록(대화 내용 등 신앙과 관련된 정보)을 저장하고 캘린더에서 다시 보여주기 위해 이용해요.",

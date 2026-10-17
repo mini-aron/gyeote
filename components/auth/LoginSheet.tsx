@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useLoginSheet } from "@/components/auth/LoginSheetContext";
 import { getSupabaseBrowserClient } from "@/shared/lib/supabase-browser";
@@ -71,6 +72,15 @@ export function LoginSheet() {
             다음에 할게요
           </button>
         </div>
+
+        <p className="flex justify-center gap-4 text-xs text-[#f4f1ff]/50">
+          <Link href="/terms" onClick={close} className="underline underline-offset-2">
+            이용약관
+          </Link>
+          <Link href="/privacy" onClick={close} className="font-medium underline underline-offset-2">
+            개인정보 처리방침
+          </Link>
+        </p>
       </div>
     </div>
   );
