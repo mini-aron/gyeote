@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { GLASS_CARD } from "@/components/glassCard";
+import { FullTextLink } from "@/components/legal/FullTextLink";
 import { useWorld } from "@/lib/world/WorldContext";
 import { CONSENT_ITEMS, CONSENT_VERSION, type ConsentType } from "@/lib/auth/consents";
 import { formatKstDate } from "@/lib/calendar/dateUtils";
@@ -233,6 +235,7 @@ export function MeView({ info }: { info: MyInfo }) {
                       {item.body.map((line) => (
                         <p key={line}>{line}</p>
                       ))}
+                      {item.fullTextHref && <FullTextLink href={item.fullTextHref} />}
                     </div>
                   )}
                 </li>
@@ -331,6 +334,15 @@ export function MeView({ info }: { info: MyInfo }) {
             </button>
           )}
         </section>
+
+        <nav aria-label="약관" className="flex gap-4 text-xs text-[#f4f1ff]/55">
+          <Link href="/terms" className="underline underline-offset-2">
+            이용약관
+          </Link>
+          <Link href="/privacy" className="font-medium underline underline-offset-2">
+            개인정보 처리방침
+          </Link>
+        </nav>
       </div>
     </main>
   );
