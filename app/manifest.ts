@@ -16,8 +16,8 @@ export default function manifest(): MetadataRoute.Manifest {
     related_applications: [
       {
         platform: "play",
-        url: "https://play.google.com/store/apps/details?id=com.gyeote.app",
-        id: "com.gyeote.app",
+        url: "https://play.google.com/store/apps/details?id=site.gyeote.app",
+        id: "site.gyeote.app",
       },
     ],
     prefer_related_applications: true,
