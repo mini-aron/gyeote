@@ -1,7 +1,7 @@
 const DISMISSED_AT_KEY = "gyeote:installPromptDismissedAt";
 const TWA_SESSION_KEY = "gyeote:isTwa";
 const DISMISS_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
-const PLAY_PACKAGE = "com.gyeote.app";
+const PLAY_PACKAGE = "site.gyeote.app";
 // Play 출시 후 true로 바꾼다
 const PLAY_STORE_RELEASED = false;
 
