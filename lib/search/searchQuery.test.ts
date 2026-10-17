@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSearchHref, generateSeed, parseSearchFilters } from "./searchQuery";
+import { buildSearchHref, generateSeed, normalizeQuery, parseSearchFilters } from "./searchQuery";
 
 function roundTrip(href: string) {
   const params = new URLSearchParams(href.split("?")[1] ?? "");
@@ -37,6 +37,13 @@ describe("matchAny", () => {
     const filters = parseSearchFilters({ match: "any", theme: ["00000000-0000-4000-8000-000000000001"] });
     expect(filters.matchAny).toBe(true);
     expect(roundTrip(buildSearchHref(filters))).toEqual(filters);
+  });
+});
+
+describe("normalizeQuery", () => {
+  it("최근 검색어와 서버 q가 같은 값이 되도록 NFC·공백을 정리한다", () => {
+    expect(normalizeQuery("  시편   23 ".normalize("NFD"))).toBe("시편 23");
+    expect(normalizeQuery("   ")).toBe("");
   });
 });
 

@@ -25,6 +25,10 @@ export const MAX_QUERY_LENGTH = 50;
 
 const SEED_PATTERN = /^[a-z0-9]{6,12}$/;
 
+export function normalizeQuery(value: string): string {
+  return value.normalize("NFC").replace(/\s+/g, " ").trim().slice(0, MAX_QUERY_LENGTH).trim();
+}
+
 type RawParams = Record<string, string | string[] | undefined>;
 
 function many(value: string | string[] | undefined): string[] {
@@ -58,7 +62,7 @@ export function parseSearchFilters(raw: RawParams): SearchFilters {
     category: validTestament && category && category.length <= 20 ? category : undefined,
     book,
     chapter: book ? int(raw.chapter, 1, 200) : undefined,
-    q: (many(raw.q)[0] ?? "").normalize("NFC").replace(/\s+/g, " ").trim().slice(0, MAX_QUERY_LENGTH).trim(),
+    q: normalizeQuery(many(raw.q)[0] ?? ""),
     bookmarked: many(raw.bookmarked)[0] === "1",
     matchAny: many(raw.match)[0] === "any",
     seed: SEED_PATTERN.test(seed ?? "") ? seed : undefined,

@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { GLASS_CARD } from "@/components/glassCard";
+import { FullTextLink } from "@/components/legal/FullTextLink";
 import { useWorld } from "@/lib/world/WorldContext";
 import { CONSENT_ITEMS, CONSENT_VERSION, type ConsentType } from "@/lib/auth/consents";
 import { formatKstDate } from "@/lib/calendar/dateUtils";
@@ -13,6 +15,7 @@ import {
   updateMarketingConsent,
 } from "@/lib/me/actions";
 import type { MeActionResult, MyInfo } from "@/lib/me/types";
+import { clearRecentSearches } from "@/lib/search/recentSearches";
 
 const DELETE_CONFIRM_TEXT = "탈퇴";
 const DEFAULT_ERROR = "처리하지 못했어요. 잠시 후 다시 시도해 주세요.";
@@ -120,6 +123,8 @@ export function MeView({ info }: { info: MyInfo }) {
 
   const handleSignOut = () => {
     startTransition(async () => {
+      // 공용 기기에서 다음 사람에게 검색어가 보이지 않게 지운다
+      clearRecentSearches();
       await getSupabaseBrowserClient().auth.signOut({ scope: "local" });
       window.location.replace("/");
     });
@@ -134,6 +139,7 @@ export function MeView({ info }: { info: MyInfo }) {
           setError(DEFAULT_ERROR);
           return;
         }
+        clearRecentSearches();
         await getSupabaseBrowserClient().auth.signOut({ scope: "local" });
         window.location.replace("/?deleted=1");
       } catch {
@@ -233,6 +239,7 @@ export function MeView({ info }: { info: MyInfo }) {
                       {item.body.map((line) => (
                         <p key={line}>{line}</p>
                       ))}
+                      {item.fullTextHref && <FullTextLink href={item.fullTextHref} />}
                     </div>
                   )}
                 </li>
@@ -331,6 +338,15 @@ export function MeView({ info }: { info: MyInfo }) {
             </button>
           )}
         </section>
+
+        <nav aria-label="약관" className="flex gap-4 text-xs text-[#f4f1ff]/55">
+          <Link href="/terms" className="underline underline-offset-2">
+            이용약관
+          </Link>
+          <Link href="/privacy" className="font-medium underline underline-offset-2">
+            개인정보 처리방침
+          </Link>
+        </nav>
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
 import { requireMember } from "@/lib/auth/requireMember";
 import { buildSearchHref, generateSeed, parseSearchFilters } from "@/lib/search/searchQuery";
 import { getSearchOptions } from "@/lib/search/getSearchOptions";
-import { searchSongs, searchVerses } from "@/lib/search/searchContent";
+import { findRelaxations, searchSongs, searchVerses } from "@/lib/search/searchContent";
 import { readBookmarkedIds } from "@/lib/bookmarks/bookmarkStore";
 import { SearchView } from "@/components/search/SearchView";
 import { SearchResults } from "@/components/search/SearchResults";
@@ -28,6 +28,8 @@ export default async function Page({
     searchPromise,
     bookmarkedPromise,
   ]);
+  const total = (verses ?? songs)?.total ?? 0;
+  const suggestions = total === 0 ? await findRelaxations(filters, bookmarkedIds ?? []) : [];
 
   return (
     <SearchView filters={filters} options={options}>
@@ -37,6 +39,7 @@ export default async function Page({
         verses={verses}
         songs={songs}
         bookmarkedIds={bookmarkedIds ?? []}
+        suggestions={suggestions}
       />
     </SearchView>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useWorld } from "@/lib/world/WorldContext";
 import { GLASS_CARD } from "@/components/glassCard";
+import { FullTextLink } from "@/components/legal/FullTextLink";
 import { CONSENT_ITEMS, type ConsentType } from "@/lib/auth/consents";
 import { useBottomNavHidden } from "@/components/nav/BottomNavContext";
 import { getSupabaseBrowserClient } from "@/shared/lib/supabase-browser";
@@ -108,6 +109,7 @@ export function ConsentForm({ next }: { next: string }) {
                   {item.body.map((line) => (
                     <p key={line}>{line}</p>
                   ))}
+                  {item.fullTextHref && <FullTextLink href={item.fullTextHref} />}
                 </div>
               )}
             </li>
