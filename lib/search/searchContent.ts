@@ -1,8 +1,9 @@
 import "server-only";
 import { supabaseAdmin } from "@/shared/lib/supabase-client";
 import { getBibleBooks } from "@/lib/catalog/catalogCache";
-import { parseReference, type ParsedReference } from "@/lib/search/parseReference";
-import type { SearchFilters } from "@/lib/search/searchQuery";
+import { parseReference, PSALMS_BOOK_ID, type ParsedReference } from "@/lib/search/parseReference";
+import { pickSuggestions, relaxationCandidates, type RelaxSuggestion } from "@/lib/search/relax";
+import { buildSearchHref, type SearchFilters } from "@/lib/search/searchQuery";
 import type { SongResult, VerseResult } from "@/lib/recommend/types";
 
 export interface SearchPage<T> {
@@ -37,8 +38,6 @@ async function resolveBookIds(filters: SearchFilters): Promise<number[] | null> 
     )
     .map((book) => book.id);
 }
-
-const PSALMS_BOOK_ID = 19;
 
 function describeReference(ref: ParsedReference, bookName: string): string {
   if (ref.chapter === undefined) return bookName;
@@ -126,4 +125,18 @@ export async function searchSongs(
     })),
     total: totalOf(rows, offset),
   };
+}
+
+export type { RelaxSuggestion };
+
+// 결과가 0개일 때만 부른다. 도움말은 부가 기능이라, 조회가 실패한 후보는 버리고 0개 안내는 그대로 보여준다.
+export async function findRelaxations(filters: SearchFilters, bookmarkedIds: string[]): Promise<RelaxSuggestion[]> {
+  const search = filters.type === "verse" ? searchVerses : searchSongs;
+  const settled = await Promise.allSettled(
+    relaxationCandidates(filters).map(async (candidate) => {
+      const page = await search({ ...candidate.filters, limit: 1 }, 0, bookmarkedIds);
+      return { label: candidate.label, href: buildSearchHref({ ...candidate.filters, limit: undefined }), count: page.total };
+    }),
+  );
+  return pickSuggestions(settled.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])));
 }
