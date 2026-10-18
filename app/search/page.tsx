@@ -17,7 +17,7 @@ export default async function Page({
   const filters = parsed.seed ? parsed : { ...parsed, seed: generateSeed() };
   const bookmarkedPromise = readBookmarkedIds(filters.type);
   const searchPromise = (async () => {
-    const ids = filters.bookmarked ? ((await bookmarkedPromise) ?? []) : [];
+    const ids = filters.bookmark ? ((await bookmarkedPromise) ?? []) : [];
     return Promise.all([
       filters.type === "verse" ? searchVerses(filters, 0, ids) : null,
       filters.type === "song" ? searchSongs(filters, 0, ids) : null,

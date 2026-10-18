@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { GLASS_CARD } from "@/components/glassCard";
+import { SongCard } from "@/components/church/SongCard";
 import { VerseCard } from "@/components/church/VerseCard";
 import { useWorld } from "@/lib/world/WorldContext";
 import { removeSongBookmark, removeVerseBookmark } from "@/lib/bookmarks/actions";
@@ -102,32 +103,22 @@ export function BookmarksView({ verses, songs }: BookmarksViewProps) {
           )}
 
         {tab === "song" &&
-          visibleSongs.map((song) => (
-            <article key={song.id} className={`${GLASS_CARD} px-5 py-4 ${song.isActive ? "" : "opacity-60"}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{song.title}</p>
-                  <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
+          visibleSongs.map((song) =>
+            song.isActive ? (
+              <SongCard key={song.id} song={song} bookmarked detailHref={`/songs/${song.id}?from=bookmarks`} />
+            ) : (
+              <article key={song.id} className={`${GLASS_CARD} px-5 py-4 opacity-60`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{song.title}</p>
+                    <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
+                  </div>
+                  <RemoveButton onClick={() => handleRemove("song", song.id)} />
                 </div>
-                <RemoveButton onClick={() => handleRemove("song", song.id)} />
-              </div>
-              {song.isActive ? (
-                <a
-                  href={
-                    song.listenUrl ??
-                    `https://www.youtube.com/results?search_query=${encodeURIComponent(`${song.title} ${song.artist}`)}`
-                  }
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-block rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-xs text-[#f4f1ff]/80"
-                >
-                  들으러 가기
-                </a>
-              ) : (
                 <p className="mt-2 text-sm text-[#f4f1ff]/60">더 이상 제공되지 않아요</p>
-              )}
-            </article>
-          ))}
+              </article>
+            ),
+          )}
       </div>
     </main>
   );

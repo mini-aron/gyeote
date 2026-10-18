@@ -12,7 +12,8 @@ export function relaxationCandidates(filters: SearchFilters): RelaxCandidate[] {
   const add = (label: string, next: Partial<SearchFilters>) => candidates.push({ label, filters: { ...filters, ...next } });
 
   if (filters.q) add("검색어 없이", { q: "" });
-  if (filters.bookmarked) add("북마크 밖에서도", { bookmarked: false });
+  if (filters.bookmark === "only") add("북마크 밖에서도", { bookmark: undefined });
+  else if (filters.bookmark === "exclude") add("북마크한 것도 함께", { bookmark: undefined });
   if (filters.chapter) add(filters.book === PSALMS_BOOK_ID ? "편 선택 없이" : "장 선택 없이", { chapter: undefined });
   else if (filters.book) add("책 선택 없이", { book: undefined });
   else if (filters.category) add("분류 선택 없이", { category: undefined });

@@ -2,6 +2,7 @@ import { isUuid } from "@/shared/lib/uuid";
 
 export type SearchType = "verse" | "song";
 export type Testament = "old" | "new";
+export type BookmarkFilter = "only" | "exclude";
 
 export interface SearchFilters {
   type: SearchType;
@@ -13,7 +14,7 @@ export interface SearchFilters {
   book?: number;
   chapter?: number;
   q: string;
-  bookmarked: boolean;
+  bookmark?: BookmarkFilter;
   matchAny: boolean;
   seed?: string;
   limit: number;
@@ -51,6 +52,7 @@ export function parseSearchFilters(raw: RawParams): SearchFilters {
   const testament = many(raw.testament)[0];
   const category = many(raw.category)[0];
   const seed = many(raw.seed)[0];
+  const bookmarked = many(raw.bookmarked)[0];
   const validTestament = isVerse && (testament === "old" || testament === "new");
   const book = isVerse ? int(raw.book, 1, 66) : undefined;
   return {
@@ -63,7 +65,7 @@ export function parseSearchFilters(raw: RawParams): SearchFilters {
     book,
     chapter: book ? int(raw.chapter, 1, 200) : undefined,
     q: normalizeQuery(many(raw.q)[0] ?? ""),
-    bookmarked: many(raw.bookmarked)[0] === "1",
+    bookmark: bookmarked === "1" ? "only" : bookmarked === "0" ? "exclude" : undefined,
     matchAny: many(raw.match)[0] === "any",
     seed: SEED_PATTERN.test(seed ?? "") ? seed : undefined,
     limit: int(raw.limit, PAGE_SIZE, MAX_LIMIT) ?? PAGE_SIZE,
@@ -81,7 +83,7 @@ export function buildSearchHref(filters: Partial<SearchFilters> & { type: Search
   if (filters.book) params.set("book", String(filters.book));
   if (filters.chapter) params.set("chapter", String(filters.chapter));
   if (filters.q) params.set("q", filters.q);
-  if (filters.bookmarked) params.set("bookmarked", "1");
+  if (filters.bookmark) params.set("bookmarked", filters.bookmark === "only" ? "1" : "0");
   if (filters.matchAny) params.set("match", "any");
   if (filters.seed) params.set("seed", filters.seed);
   if (filters.limit && filters.limit > PAGE_SIZE) params.set("limit", String(filters.limit));

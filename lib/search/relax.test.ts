@@ -17,6 +17,12 @@ describe("relaxationCandidates", () => {
     ]);
   });
 
+  it("북마크 안 한 것만이면 북마크한 것도 함께 보는 후보를 낸다", () => {
+    const [candidate] = relaxationCandidates(parseSearchFilters({ bookmarked: "0" }));
+    expect(candidate.label).toBe("북마크한 것도 함께");
+    expect(candidate.filters.bookmark).toBeUndefined();
+  });
+
   it("성경 범위는 가장 좁은 단계만 푼다", () => {
     const filters = parseSearchFilters({ testament: "old", book: "19", chapter: "23" });
     const [candidate] = relaxationCandidates(filters);
