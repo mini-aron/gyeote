@@ -13,10 +13,12 @@ const SEARCH_FALLBACK_HREF = "/search?type=song";
 export function SongDetailView({
   song,
   bookmarked,
+  lyrics,
   canGoBack,
 }: {
   song: SongDetail;
   bookmarked: boolean;
+  lyrics: { text: string | null } | null;
   canGoBack: boolean;
 }) {
   const { flyTo } = useWorld();
@@ -93,6 +95,22 @@ export function SongDetailView({
             )}
           </div>
         </section>
+
+        {lyrics && (
+          <details className={`${GLASS_CARD} group px-5 py-4`}>
+            <summary className="flex cursor-pointer list-none items-center justify-between text-sm text-[#f4f1ff]/85">
+              가사
+              <span aria-hidden="true" className="text-[#f4f1ff]/50 group-open:rotate-180">
+                ▾
+              </span>
+            </summary>
+            {lyrics.text ? (
+              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-[#f4f1ff]/85">{lyrics.text}</p>
+            ) : (
+              <p className="mt-3 text-sm text-[#f4f1ff]/55">아직 이 곡의 가사를 찾지 못했어요.</p>
+            )}
+          </details>
+        )}
       </div>
     </main>
   );
