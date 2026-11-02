@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { PLAY_STORE_RELEASED } from "@/lib/pwa/installPrompt";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -20,7 +21,8 @@ export default function manifest(): MetadataRoute.Manifest {
         id: "site.gyeote.app",
       },
     ],
-    prefer_related_applications: true,
+    // 출시 전에 true면 Chrome이 아직 없는 Play 앱을 이유로 웹 설치 안내를 숨긴다
+    prefer_related_applications: PLAY_STORE_RELEASED,
     categories: ["lifestyle", "books"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
