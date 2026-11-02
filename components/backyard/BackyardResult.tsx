@@ -5,7 +5,7 @@ import { VerseCard } from "@/components/church/VerseCard";
 import { SongCard } from "@/components/church/SongCard";
 import { PrayerTopicCard } from "./PrayerTopicCard";
 import type { RecommendResult } from "@/lib/recommend/types";
-import { buildShareText } from "@/lib/share/buildShareText";
+import { ShareButton } from "@/components/share/ShareButton";
 import { savePendingResult } from "@/lib/bookmarks/pendingResult";
 import { useBookmarkStatus } from "@/components/bookmarks/useBookmarkStatus";
 import { REQUEST_TIMEOUT_MS, requestJson } from "@/shared/lib/requestJson";
@@ -57,27 +57,6 @@ export function BackyardResult({
   const saveSnapshot = () =>
     savePendingResult({ mode: "backyard", verse, song, resultLine: encouragement });
 
-  async function handleShare() {
-    const shareText = buildShareText(verse, song);
-    if (!shareText) return;
-    const url = window.location.origin;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: shareText, url });
-        return;
-      } catch {
-        // 사용자가 공유 시트를 취소했거나 지원 안 하는 대상 — 클립보드 복사로 이어감
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(`${shareText}\n${url}`);
-    } catch {
-      // 클립보드 접근 실패 — 공유는 부가 기능이라 조용히 무시
-    }
-  }
-
   return (
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
@@ -90,13 +69,13 @@ export function BackyardResult({
           <PrayerTopicCard status={prayerStatus} topics={prayerTopics} onRetry={handlePrayerTopic} />
         )}
         <div className="flex flex-wrap gap-2 text-xs">
+          <ShareButton verse={verse} song={song} />
           <ActionButton onClick={onRetrySong} disabled={retriesLeft <= 0 || songLoading}>
             다른 곡 추천받기{retriesLeft > 0 ? ` (${retriesLeft}회 남음)` : ""}
           </ActionButton>
           {summary && prayerStatus === "idle" && (
             <ActionButton onClick={handlePrayerTopic}>기도제목으로 정리하기</ActionButton>
           )}
-          <ActionButton onClick={handleShare}>공유하기</ActionButton>
           <ActionButton onClick={onRestart} disabled={songLoading}>처음부터</ActionButton>
         </div>
         <InstallBanner />
