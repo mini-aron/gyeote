@@ -9,10 +9,11 @@ const NAV_ITEMS = [
   { href: "/admin", label: "후보 큐" },
   { href: "/admin/new", label: "직접 입력" },
   { href: "/admin/channels", label: "채널" },
+  { href: "/admin/lyrics", label: "가사" },
 ];
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === "/admin") return !pathname.startsWith("/admin/channels") && !pathname.startsWith("/admin/new");
+  if (href === "/admin") return !NAV_ITEMS.some((item) => item.href !== "/admin" && pathname.startsWith(item.href));
   return pathname.startsWith(href);
 }
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { BookmarkState } from "@/lib/bookmarks/types";
 import type { SongResult } from "@/lib/recommend/types";
 import { GLASS_CARD } from "@/components/glassCard";
@@ -7,10 +8,12 @@ export function SongCard({
   song,
   bookmarked,
   onBeforeLogin,
+  detailHref,
 }: {
-  song: SongResult | null;
+  song: Pick<SongResult, "id" | "title" | "artist" | "listenUrl"> | null;
   bookmarked: BookmarkState;
   onBeforeLogin?: () => void;
+  detailHref?: string;
 }) {
   if (!song) {
     return (
@@ -27,10 +30,19 @@ export function SongCard({
 
   return (
     <div className={`${GLASS_CARD} flex items-center justify-between gap-3 px-5 py-4`}>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-[#f4f1ff]">{song.title}</p>
-        <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
-      </div>
+      {detailHref ? (
+        <Link href={detailHref} className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-[#f4f1ff]">
+            {song.title} <span aria-hidden="true" className="text-[#f4f1ff]/40">›</span>
+          </p>
+          <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
+        </Link>
+      ) : (
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-[#f4f1ff]">{song.title}</p>
+          <p className="text-xs text-[#f4f1ff]/50">{song.artist}</p>
+        </div>
+      )}
       <BookmarkButton kind="song" id={song.id} initialBookmarked={bookmarked} onBeforeLogin={onBeforeLogin} />
       <a
         href={listenHref}

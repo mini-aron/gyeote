@@ -25,7 +25,9 @@ function appendUnique<T extends { id: string }>(current: T[], next: T[]): T[] {
 
 function emptyMessage(filters: SearchFilters): string {
   const noun = filters.type === "verse" ? "말씀" : "찬양";
-  return filters.bookmarked ? `북마크한 ${noun} 중 조건에 맞는 ${noun}이 없어요.` : `조건에 맞는 ${noun}이 없어요.`;
+  if (filters.bookmark === "only") return `북마크한 ${noun} 중 조건에 맞는 ${noun}이 없어요.`;
+  if (filters.bookmark === "exclude") return `북마크하지 않은 ${noun} 중 조건에 맞는 ${noun}이 없어요.`;
+  return `조건에 맞는 ${noun}이 없어요.`;
 }
 
 export function SearchResults({
@@ -158,7 +160,7 @@ export function SearchResults({
         <VerseCard key={verse.id} verse={verse} bookmarked={bookmarked.has(verse.id)} />
       ))}
       {songItems.map((song) => (
-        <SongCard key={song.id} song={song} bookmarked={bookmarked.has(song.id)} />
+        <SongCard key={song.id} song={song} bookmarked={bookmarked.has(song.id)} detailHref={`/songs/${song.id}?from=search`} />
       ))}
       {total > count && count < MAX_LIMIT && (
         <button

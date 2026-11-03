@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { PLAY_STORE_RELEASED } from "@/lib/pwa/installPrompt";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -16,16 +17,32 @@ export default function manifest(): MetadataRoute.Manifest {
     related_applications: [
       {
         platform: "play",
-        url: "https://play.google.com/store/apps/details?id=com.gyeote.app",
-        id: "com.gyeote.app",
+        url: "https://play.google.com/store/apps/details?id=site.gyeote.app",
+        id: "site.gyeote.app",
       },
     ],
-    prefer_related_applications: true,
+    // 출시 전에 true면 Chrome이 아직 없는 Play 앱을 이유로 웹 설치 안내를 숨긴다
+    prefer_related_applications: PLAY_STORE_RELEASED,
     categories: ["lifestyle", "books"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
+    // 홈 화면 아이콘을 길게 누르면 뜨는 메뉴 — Play 앱(TWA)도 이 목록으로 바로가기를 만든다
+    shortcuts: [
+      { name: "캘린더", url: "/calendar", icons: shortcutIcons("calendar") },
+      { name: "북마크", url: "/bookmarks", icons: shortcutIcons("bookmarks") },
+      { name: "검색", url: "/search", icons: shortcutIcons("search") },
+    ],
   };
+}
+
+// 글리프가 가운데 절반 안에 있어서 같은 파일을 원형으로 잘라도(maskable) 안 잘린다
+function shortcutIcons(name: string) {
+  const src = `/icons/shortcuts/${name}.png`;
+  return [
+    { src, sizes: "192x192", type: "image/png", purpose: "any" as const },
+    { src, sizes: "192x192", type: "image/png", purpose: "maskable" as const },
+  ];
 }

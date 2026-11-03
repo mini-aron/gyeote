@@ -18,7 +18,12 @@ function tagsOrNull(ids: string[]): string[] | null {
 }
 
 function onlyIds(filters: SearchFilters, bookmarkedIds: string[]): string[] | null {
-  return filters.bookmarked ? bookmarkedIds : null;
+  return filters.bookmark === "only" ? bookmarkedIds : null;
+}
+
+// p_exclude_ids가 없는 옛 함수도 호출되도록, 제외할 때만 인자를 싣는다.
+function excludeIds(filters: SearchFilters, bookmarkedIds: string[]): { p_exclude_ids?: string[] } {
+  return filters.bookmark === "exclude" ? { p_exclude_ids: bookmarkedIds } : {};
 }
 
 // count(*) over ()는 결과 행이 없으면 total도 없어서, offset이 끝을 넘은 경우 지금까지 본 개수로 수렴시킨다.
@@ -66,6 +71,7 @@ export async function searchVerses(
     p_theme_ids: tagsOrNull(filters.theme),
     p_situation_ids: tagsOrNull(filters.situation),
     p_only_ids: onlyIds(filters, bookmarkedIds),
+    ...excludeIds(filters, bookmarkedIds),
     p_seed: shuffle ? (filters.seed ?? null) : null,
     p_limit: filters.limit,
     p_offset: offset,
@@ -100,6 +106,7 @@ export async function searchSongs(
     p_situation_ids: tagsOrNull(filters.situation),
     p_mood_ids: tagsOrNull(filters.mood),
     p_only_ids: onlyIds(filters, bookmarkedIds),
+    ...excludeIds(filters, bookmarkedIds),
     p_seed: filters.q ? null : (filters.seed ?? null),
     p_limit: filters.limit,
     p_offset: offset,

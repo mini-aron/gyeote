@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "site.gyeote.app",
+      "sha256_cert_fingerprints": [
+        "F9:BD:B7:97:9E:FC:33:68:3E:E9:08:59:90:72:58:F9:52:4E:23:1B:51:44:BD:E9:A2:D9:34:CD:BE:57:AB:5C"
+      ]
+    }
+  }
+]

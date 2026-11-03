@@ -29,7 +29,7 @@ describe("activeFilterChips", () => {
   it("북마크와 태그를 칩으로 만들고, 태그 칩은 그 태그만 뺀다", () => {
     const filters = parseSearchFilters({ type: "song", bookmarked: "1", theme: THEME, mood: MOOD });
     expect(activeFilterChips(filters, OPTIONS)).toEqual([
-      { key: "bookmarked", label: "북마크", remove: { bookmarked: false } },
+      { key: "bookmark", label: "북마크", remove: { bookmark: undefined } },
       { key: `theme:${THEME}`, label: "위로", remove: { theme: [] } },
       { key: `mood:${MOOD}`, label: "잔잔함", remove: { mood: [] } },
     ]);

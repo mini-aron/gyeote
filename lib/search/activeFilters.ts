@@ -9,6 +9,7 @@ export interface ActiveFilterChip {
 }
 
 const TESTAMENT_LABEL = { old: "구약", new: "신약" } as const;
+const BOOKMARK_LABEL = { only: "북마크", exclude: "북마크 안 한 것" } as const;
 
 function scopeChip(filters: SearchFilters, options: SearchOptions): ActiveFilterChip | null {
   const bookName = options.books.find((book) => book.id === filters.book)?.name;
@@ -35,7 +36,9 @@ function scopeChip(filters: SearchFilters, options: SearchOptions): ActiveFilter
 // 성경 범위는 가장 좁은 단계 하나만 칩으로 보여주고, 지우면 한 단계씩 넓어진다.
 export function activeFilterChips(filters: SearchFilters, options: SearchOptions): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
-  if (filters.bookmarked) chips.push({ key: "bookmarked", label: "북마크", remove: { bookmarked: false } });
+  if (filters.bookmark) {
+    chips.push({ key: "bookmark", label: BOOKMARK_LABEL[filters.bookmark], remove: { bookmark: undefined } });
+  }
   const scope = scopeChip(filters, options);
   if (scope) chips.push(scope);
 

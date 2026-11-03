@@ -40,6 +40,18 @@ describe("matchAny", () => {
   });
 });
 
+describe("bookmark", () => {
+  it("1은 북마크한 것만, 0은 북마크 안 한 것만이고 URL 왕복이 유지된다", () => {
+    expect(parseSearchFilters({ bookmarked: "1" }).bookmark).toBe("only");
+    expect(parseSearchFilters({ bookmarked: "0" }).bookmark).toBe("exclude");
+    expect(parseSearchFilters({ bookmarked: "yes" }).bookmark).toBeUndefined();
+    for (const bookmarked of ["1", "0"]) {
+      const filters = parseSearchFilters({ bookmarked });
+      expect(roundTrip(buildSearchHref(filters))).toEqual(filters);
+    }
+  });
+});
+
 describe("normalizeQuery", () => {
   it("최근 검색어와 서버 q가 같은 값이 되도록 NFC·공백을 정리한다", () => {
     expect(normalizeQuery("  시편   23 ".normalize("NFD"))).toBe("시편 23");

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { VerseCard } from "./VerseCard";
 import { SongCard } from "./SongCard";
 import type { RecommendResult } from "@/lib/recommend/types";
-import { buildShareText } from "@/lib/share/buildShareText";
+import { ShareButton } from "@/components/share/ShareButton";
 import { savePendingResult } from "@/lib/bookmarks/pendingResult";
 import { useBookmarkStatus } from "@/components/bookmarks/useBookmarkStatus";
 import { SpeechBubble } from "@/components/SpeechBubble";
@@ -34,27 +34,6 @@ export function ChurchResult({
   const bookmarkStatus = useBookmarkStatus(verse?.id, song?.id);
   const saveSnapshot = () => savePendingResult({ mode: "church", verse, song, resultLine });
 
-  async function handleShare() {
-    const shareText = buildShareText(verse, song);
-    if (!shareText) return;
-    const url = window.location.href;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: shareText, url });
-        return;
-      } catch {
-        // 사용자가 공유 시트를 취소했거나 지원 안 하는 대상 — 클립보드 복사로 이어감
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(`${shareText}\n${url}`);
-    } catch {
-      // 클립보드 접근 실패 — 공유는 부가 기능이라 조용히 무시
-    }
-  }
-
   return (
     <div className="pointer-events-none flex flex-1 flex-col justify-end px-4 pb-[calc(96px+env(safe-area-inset-bottom,0px))] pt-24">
       <div className="pointer-events-auto flex flex-col gap-4">
@@ -64,11 +43,11 @@ export function ChurchResult({
           <SongCard song={song} bookmarked={bookmarkStatus.song} onBeforeLogin={saveSnapshot} />
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
+          <ShareButton verse={verse} song={song} />
           <ActionButton onClick={onRetrySong} disabled={retriesLeft <= 0 || songLoading}>
             다른 곡 추천받기{retriesLeft > 0 ? ` (${retriesLeft}회 남음)` : ""}
           </ActionButton>
           <ActionButton onClick={onMoveToBackyard} disabled={songLoading}>뒤뜰에서 더 얘기하기</ActionButton>
-          <ActionButton onClick={handleShare}>공유하기</ActionButton>
           <ActionButton onClick={onRestart} disabled={songLoading}>처음부터</ActionButton>
         </div>
         <InstallBanner />
