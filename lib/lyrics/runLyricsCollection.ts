@@ -4,7 +4,7 @@ import { fetchGasazipLyrics, searchGasazip } from "@/lib/lyrics/gasazipSource";
 import { pickLyricsMatch, type LyricsMatch } from "@/lib/lyrics/matchSong";
 
 // 한 사이트를 연달아 두드리지 않도록 요청 사이에 쉰다
-const REQUEST_INTERVAL_MS = 1_000;
+const REQUEST_INTERVAL_MS = 3_000;
 const BATCH_SIZE = 200;
 const MAX_CONSECUTIVE_FAILURES = 5;
 

@@ -1,9 +1,12 @@
 import type { ConversationTags } from "@/lib/analysis/types";
-import { getTaggedSongs, getTaggedVerses } from "@/lib/catalog/catalogCache";
+import { getTaggedSongs, getTaggedVerses, type TaggedVerse } from "@/lib/catalog/catalogCache";
 import type { RecommendationRecord, RecommendResult, SongResult, VerseResult } from "./types";
+import { rankVerseCandidates, shuffle } from "./ranking";
+import type { VersePickContext } from "./pickVerseWithAi";
 
 const RECENCY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const TOP_CANDIDATE_COUNT = 5;
+const AI_VERSE_CANDIDATE_COUNT = 20;
 
 function overlapCount(a: string[], b: string[]): number {
   return a.filter((value) => b.includes(value)).length;
@@ -33,7 +36,7 @@ function recentIdsWithinWindow(
  */
 function pickWithFallback<T>(pool: T[], scorers: Array<(item: T) => number>): T | null {
   for (const scorer of scorers) {
-    const scored = pool
+    const scored = shuffle(pool)
       .map((item) => ({ item, score: scorer(item) }))
       .filter((entry) => entry.score > 0);
     if (scored.length === 0) continue;
@@ -49,12 +52,15 @@ export interface RecommendOptions {
   tags: ConversationTags;
   history: RecommendationRecord[];
   include?: { verse?: boolean; song?: boolean };
+  // 없거나 summary가 비면(폴백 분석) AI 선택 없이 태그 점수로만 고른다.
+  context?: VersePickContext;
 }
 
 export async function recommend({
   tags,
   history,
   include,
+  context,
 }: RecommendOptions): Promise<RecommendResult> {
   const now = Date.now();
   const wantSong = include?.song ?? true;
@@ -94,12 +100,20 @@ export async function recommend({
     const excludeIds = recentIdsWithinWindow(history, "verseId", now);
     const withoutRecent = verses.filter((item) => !excludeIds.has(item.id));
     const pool = withoutRecent.length > 0 ? withoutRecent : verses;
-    const picked = pickWithFallback(pool, [
-      (item) =>
-        (tags.situation && item.situations.includes(tags.situation) ? 1 : 0) +
-        overlapCount(item.themes, tags.themes),
-      (item) => overlapCount(item.themes, tags.themes),
-    ]);
+    const candidates = rankVerseCandidates(pool, tags, AI_VERSE_CANDIDATE_COUNT);
+    let picked: TaggedVerse | null = null;
+    if (context?.summary && candidates.length > 0) {
+      try {
+        const { pickVerseWithAi } = await import("./pickVerseWithAi");
+        picked = await pickVerseWithAi(context, candidates);
+      } catch (error) {
+        console.error("[recommend] AI 말씀 선택 실패, 태그 점수로 폴백", error instanceof Error ? error.name : "unknown");
+      }
+    }
+    if (!picked && candidates.length > 0) {
+      const top = candidates.slice(0, TOP_CANDIDATE_COUNT);
+      picked = top[Math.floor(Math.random() * top.length)];
+    }
     verse = picked
       ? {
           id: picked.id,
