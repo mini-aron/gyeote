@@ -130,6 +130,7 @@ export async function POST(request: Request) {
       tags: body.tags,
       history,
       include: body.include,
+      context: body.tags,
     });
 
     const mode = body.mode === "backyard" ? "backyard" : "church";
